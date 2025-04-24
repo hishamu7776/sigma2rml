@@ -3,5 +3,20 @@
     "filename": "web_apache_segfault.yml",
     "path": "uploaded_files\\web_apache_segfault.yml",
     "title": "Apache Segmentation Fault"
+  },
+  {
+    "filename": "file_event_win_adsi_cache_creation_by_uncommon_tool.yml",
+    "path": "uploaded_files\\file_event_win_adsi_cache_creation_by_uncommon_tool.yml",
+    "title": "ADSI-Cache File Creation By Uncommon Tool"
+  },
+  {
+    "filename": "web_jndi_exploit.yml",
+    "path": "uploaded_files\\web_jndi_exploit.yml",
+    "title": "JNDIExploit Pattern"
+  },
+  {
+    "filename": "proc_creation_lnx_at_command.yml",
+    "path": "uploaded_files\\proc_creation_lnx_at_command.yml",
+    "title": "Scheduled Task/Job At"
   }
 ]
