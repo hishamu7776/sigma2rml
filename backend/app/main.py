@@ -1,16 +1,10 @@
-from fastapi import FastAPI, UploadFile, File
-import shutil
-import os
+from fastapi import FastAPI
+from app.api import upload, transpile
 
 app = FastAPI()
+app.include_router(upload.router, prefix="/upload", tags=["Upload"])
+app.include_router(transpile.router, prefix="/transpile", tags=["Transpile"])
 
 @app.get("/")
-def read_root():
+def root():
     return {"message": "Welcome to Sigma2RML backend"}
-
-@app.post("/uploadfile/")
-async def upload_file(file: UploadFile = File(...)):
-    file_location = f"uploaded_{file.filename}"
-    with open(file_location, "wb+") as file_object:
-        shutil.copyfileobj(file.file, file_object)
-    return {"info": f"file '{file.filename}' saved at '{file_location}'"}
