@@ -18,5 +18,10 @@
     "filename": "proc_creation_lnx_at_command.yml",
     "path": "uploaded_files\\proc_creation_lnx_at_command.yml",
     "title": "Scheduled Task/Job At"
+  },
+  {
+    "filename": "proc_creation_lnx_xterm_reverse_shell.yml",
+    "path": "uploaded_files\\proc_creation_lnx_xterm_reverse_shell.yml",
+    "title": "Potential Xterm Reverse Shell"
   }
 ]
