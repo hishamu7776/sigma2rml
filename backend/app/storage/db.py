@@ -16,7 +16,18 @@ def save_db(data):
 
 def add_file_record(filename, path, title=""):
     db = load_db()
-    db.append({"filename": filename, "path": path, "title": title})
+    # Enforce uniqueness
+    if any(f["filename"] == filename for f in db):
+        raise ValueError("A file with this filename already exists.")
+    if any(f["title"] == title for f in db if title):
+        raise ValueError("A file with this title already exists.")
+    db.append({
+        "filename": filename,
+        "path": path,
+        "title": title,
+        "translated": False,
+        "rml_path": None
+    })
     save_db(db)
 
 def delete_file_record(filename):
@@ -26,3 +37,12 @@ def delete_file_record(filename):
 
 def get_file_record(filename):
     return next((f for f in load_db() if f["filename"] == filename), None)
+
+def update_translation_status(filename, rml_path):
+    db = load_db()
+    for f in db:
+        if f["filename"] == filename:
+            f["translated"] = True
+            f["rml_path"] = rml_path
+            break
+    save_db(db)

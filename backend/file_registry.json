@@ -2,26 +2,50 @@
   {
     "filename": "web_apache_segfault.yml",
     "path": "uploaded_files\\web_apache_segfault.yml",
-    "title": "Apache Segmentation Fault"
+    "title": "Apache Segmentation Fault",
+    "translated": false,
+    "rml_path": null
   },
   {
     "filename": "file_event_win_adsi_cache_creation_by_uncommon_tool.yml",
     "path": "uploaded_files\\file_event_win_adsi_cache_creation_by_uncommon_tool.yml",
-    "title": "ADSI-Cache File Creation By Uncommon Tool"
+    "title": "ADSI-Cache File Creation By Uncommon Tool",
+    "translated": false,
+    "rml_path": null
   },
   {
     "filename": "web_jndi_exploit.yml",
     "path": "uploaded_files\\web_jndi_exploit.yml",
-    "title": "JNDIExploit Pattern"
+    "title": "JNDIExploit Pattern",
+    "translated": false,
+    "rml_path": null
   },
   {
     "filename": "proc_creation_lnx_at_command.yml",
     "path": "uploaded_files\\proc_creation_lnx_at_command.yml",
-    "title": "Scheduled Task/Job At"
+    "title": "Scheduled Task/Job At",
+    "translated": false,
+    "rml_path": null
   },
   {
     "filename": "proc_creation_lnx_xterm_reverse_shell.yml",
     "path": "uploaded_files\\proc_creation_lnx_xterm_reverse_shell.yml",
-    "title": "Potential Xterm Reverse Shell"
+    "title": "Potential Xterm Reverse Shell",
+    "translated": false,
+    "rml_path": null
+  },
+  {
+    "filename": "net_connection_lnx_ngrok_tunnel.yml",
+    "path": "uploaded_files\\net_connection_lnx_ngrok_tunnel.yml",
+    "title": "Communication To Ngrok Tunneling Service - Linux",
+    "translated": false,
+    "rml_path": null
+  },
+  {
+    "filename": "net_connection_lnx_back_connect_shell_dev.yml",
+    "path": "uploaded_files\\net_connection_lnx_back_connect_shell_dev.yml",
+    "title": "Linux Reverse Shell Indicator",
+    "translated": false,
+    "rml_path": null
   }
 ]
