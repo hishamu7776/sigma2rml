@@ -47,5 +47,12 @@
     "title": "Linux Reverse Shell Indicator",
     "translated": false,
     "rml_path": null
+  },
+  {
+    "filename": "title Suspicious CMD Execution.yml",
+    "path": "uploaded_files\\title Suspicious CMD Execution.yml",
+    "title": "Suspicious CMD Execution",
+    "translated": true,
+    "rml_path": "translated_files\\title Suspicious CMD Execution.rml"
   }
 ]

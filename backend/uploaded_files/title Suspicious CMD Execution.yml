@@ -1,0 +1,31 @@
+title: Suspicious CMD Execution
+id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+status: stable
+description: Detects execution of the Windows command-line utility (cmd.exe) which can indicate manual user activity or scripting.
+author: your.name@example.com
+date: 2025/04/25
+references:
+  - https://attack.mitre.org/techniques/T1059/003/
+  - https://docs.microsoft.com/en-us/sysinternals/downloads/sysmon
+logsource:
+  product: windows
+  category: process_creation
+  service: sysmon
+detection:
+  selection:
+    Image: 'C:\\Windows\\System32\\cmd.exe'
+  condition: selection
+falsepositives:
+  - Administrator running a command manually
+  - Automated script or maintenance task
+level: medium
+tags:
+  - attack.execution
+  - attack.t1059.003
+  - car.2013-05-001
+  - sigma_process_cmd_exec
+fields:
+  - Image
+  - CommandLine
+  - ParentImage
+  - User
