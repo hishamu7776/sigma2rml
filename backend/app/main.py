@@ -17,7 +17,7 @@ app.add_middleware(
 app.include_router(upload.router, prefix="/upload", tags=["Upload"])
 app.include_router(transpile.router, prefix="/transpile", tags=["Transpile"])
 app.include_router(files.file_router, prefix="/files", tags=["File Management"])
-app.include_router(translate.translate_router, prefix="/translate", tags=["Translate"])
+app.include_router(translate.router, prefix="/translate", tags=["Translate"])
 
 @app.get("/")
 def root():

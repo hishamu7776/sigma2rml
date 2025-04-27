@@ -1,0 +1,3 @@
+logsourceFilter() matches {product: "windows", service: "sysmon"};
+no_selection not matches {EventID: "16"};
+Main = (no_selection) (Main \/ empty);

@@ -24,35 +24,49 @@
     "filename": "proc_creation_lnx_at_command.yml",
     "path": "uploaded_files\\proc_creation_lnx_at_command.yml",
     "title": "Scheduled Task/Job At",
-    "translated": false,
-    "rml_path": null
+    "translated": true,
+    "rml_path": "uploaded_files\\proc_creation_lnx_at_command.rml"
   },
   {
     "filename": "proc_creation_lnx_xterm_reverse_shell.yml",
     "path": "uploaded_files\\proc_creation_lnx_xterm_reverse_shell.yml",
     "title": "Potential Xterm Reverse Shell",
-    "translated": false,
-    "rml_path": null
+    "translated": true,
+    "rml_path": "uploaded_files\\proc_creation_lnx_xterm_reverse_shell.rml"
   },
   {
     "filename": "net_connection_lnx_ngrok_tunnel.yml",
     "path": "uploaded_files\\net_connection_lnx_ngrok_tunnel.yml",
     "title": "Communication To Ngrok Tunneling Service - Linux",
-    "translated": false,
-    "rml_path": null
+    "translated": true,
+    "rml_path": "uploaded_files\\net_connection_lnx_ngrok_tunnel.rml"
   },
   {
     "filename": "net_connection_lnx_back_connect_shell_dev.yml",
     "path": "uploaded_files\\net_connection_lnx_back_connect_shell_dev.yml",
     "title": "Linux Reverse Shell Indicator",
-    "translated": false,
-    "rml_path": null
+    "translated": true,
+    "rml_path": "uploaded_files\\net_connection_lnx_back_connect_shell_dev.rml"
   },
   {
     "filename": "title Suspicious CMD Execution.yml",
     "path": "uploaded_files\\title Suspicious CMD Execution.yml",
     "title": "Suspicious CMD Execution",
     "translated": true,
-    "rml_path": "translated_files\\title Suspicious CMD Execution.rml"
+    "rml_path": "uploaded_files\\title Suspicious CMD Execution.rml"
+  },
+  {
+    "filename": "sysmon_config_modification.yml",
+    "path": "uploaded_files\\sysmon_config_modification.yml",
+    "title": "Sysmon Configuration Change",
+    "translated": true,
+    "rml_path": "uploaded_files\\sysmon_config_modification.rml"
+  },
+  {
+    "filename": "sysmon_config_modification_status.yml",
+    "path": "uploaded_files\\sysmon_config_modification_status.yml",
+    "title": "Sysmon Configuration Modification",
+    "translated": false,
+    "rml_path": null
   }
 ]
