@@ -1,0 +1,3 @@
+logsource matches {service: 'apache'};
+// Translation not supported: Keyword-style matching not supported under 'keywords'
+Main = logsource >> (// Translation not supported: Unknown name: keywords (Main \/ empty));

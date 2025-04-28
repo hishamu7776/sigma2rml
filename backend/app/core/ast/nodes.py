@@ -1,102 +1,123 @@
 from .base import ASTNode
 
-# --------- Basic Match Nodes ----------
+def format_value(val):
+    if isinstance(val, (int, float)):
+        return str(val)
+    return f"'{val}'"
+
+
+# ----------------------------------------
+# Logical nodes (AND, OR, NOT)
+# ----------------------------------------
+
+class AndNode(ASTNode):
+    def __init__(self, nodes):
+        self.nodes = nodes
+
+    def to_rml(self) -> str:
+        return "(" + " /\\ ".join(node.to_rml() for node in self.nodes) + ")"
+
+class OrNode(ASTNode):
+    def __init__(self, nodes):
+        self.nodes = nodes
+
+    def to_rml(self) -> str:
+        return "(" + " \\/ ".join(node.to_rml() for node in self.nodes) + ")"
+
+class NotNode(ASTNode):
+    def __init__(self, node):
+        self.node = node
+
+    def to_rml(self) -> str:
+        return "(~" + self.node.to_rml() + ")"
+
+# ----------------------------------------
+# Reference node for match names
+# ----------------------------------------
+
+class NameNode(ASTNode):
+    def __init__(self, name):
+        self.name = name
+
+    def to_rml(self) -> str:
+        return self.name
+
+# ----------------------------------------
+# Matches and Filters
+# ----------------------------------------
 
 class LogsourceFilterNode(ASTNode):
-    def __init__(self, fields: dict):
+    def __init__(self, fields):
         self.fields = fields
 
     def to_rml(self) -> str:
-        conditions = ', '.join(f"{k.lower()}: '{v}'" for k, v in self.fields.items())
+        conditions = ', '.join(f"{k.lower()}: {self._format_value(v)}" for k, v in self.fields.items())
         return f"logsource matches {{{conditions}}};"
 
+    def _format_value(self, val):
+        if isinstance(val, (int, float)):
+            return str(val)
+        return f"'{val}'"
 
 class ExistsNode(ASTNode):
-    def __init__(self, field: str):
-        self.field = field
+    def __init__(self, field):
+        self.field = field.lower()
 
     def to_rml(self) -> str:
         return f"exists matches {{{self.field}: _}};"
 
-
 class SimpleMatchNode(ASTNode):
-    def __init__(self, name: str, fields: dict, positive: bool = True):
+    def __init__(self, name, fields, positive=True):
         self.name = name
         self.fields = fields
         self.positive = positive
 
     def to_rml(self) -> str:
-        conditions = ', '.join(f"{k.lower()}: '{v}'" for k, v in self.fields.items())
+        fields = ', '.join(f"{k.lower()}: {self._format_value(v)}" for k, v in self.fields.items())
         if self.positive:
-            return f"{self.name} matches {{{conditions}}};"
+            return f"{self.name} matches {{{fields}}};"
         else:
-            return f"{self.name} not matches {{{conditions}}};"
+            return f"{self.name} not matches {{{fields}}};"
 
+    def _format_value(self, val):
+        if isinstance(val, (int, float)):
+            return str(val)
+        return f"'{val}'"
 
-class ComparisonNode(ASTNode):
-    def __init__(self, field: str, operator: str, value: str):
-        self.field = field
-        self.operator = operator
-        self.value = value
+class ComparisonMatchNode(ASTNode):
+    def __init__(self, name):
+        self.name = name
+        self.fields = []  # list of (field, varname, operator, value)
+
+    def add_condition(self, field, operator, value):
+        var = 'x' if len(self.fields) == 0 else chr(ord('x') + len(self.fields))
+        self.fields.append((field.lower(), var, operator, value))
 
     def to_rml(self) -> str:
-        op_map = {
-            "gt": ">", "gte": ">=", "lt": "<", "lte": "<=",
-            "minute": "0 < x <", "hour": "0 < x <", "day": "0 < x <",
-            "week": "0 < x <", "month": "0 < x <", "year": "0 < x <"
-        }
-        if self.operator in ["gt", "gte", "lt", "lte"]:
-            return f"{self.field} {op_map[self.operator]} {self.value};"
-        elif self.operator in ["minute", "hour", "day", "week", "month", "year"]:
-            return f"{self.field} {op_map[self.operator]} {self.value};"
-        else:
-            return f"// Unsupported comparison modifier on {self.field}"
+        field_mapping = ', '.join(f"{field}: {var}" for field, var, _, _ in self.fields)
+        conditions = ' && '.join(f"{var} {self._operator_symbol(op)} {self._format_value(val)}" for _, var, op, val in self.fields)
+        return f"{self.name} not matches {{{field_mapping}}} with {conditions};"
 
+    def _operator_symbol(self, op):
+        return {
+            'gt': '>',
+            'gte': '>=',
+            'lt': '<',
+            'lte': '<='
+        }.get(op, '??')
 
-class ListOrNode(ASTNode):
-    def __init__(self, base_field: str, values: list):
-        self.base_field = base_field
-        self.values = values
+    def _format_value(self, val):
+        if isinstance(val, (int, float)):
+            return str(val)
+        return f"'{val}'"
 
-    def to_rml(self) -> str:
-        rmls = []
-        for idx, val in enumerate(self.values):
-            rmls.append(f"no_{self.base_field}_{idx+1} not matches {{{self.base_field.lower()}: '{val}'}};")
-        return '\n'.join(rmls)
-
-# --------- Control/Unsupported Nodes ----------
+# ----------------------------------------
+# Unsupported node for fallback
+# ----------------------------------------
 
 class UnsupportedNode(ASTNode):
-    def __init__(self, reason: str):
+    def __init__(self, reason):
         self.reason = reason
 
     def to_rml(self) -> str:
         return f"// Translation not supported: {self.reason}"
-
-
-# --------- Logical Composition Nodes ----------
-
-class AndNode(ASTNode):
-    def __init__(self, left: ASTNode, right: ASTNode):
-        self.left = left
-        self.right = right
-
-    def to_rml(self) -> str:
-        return f"({self.left.to_rml()} /\\ {self.right.to_rml()})"
-
-class OrNode(ASTNode):
-    def __init__(self, left: ASTNode, right: ASTNode):
-        self.left = left
-        self.right = right
-
-    def to_rml(self) -> str:
-        return f"({self.left.to_rml()} \\/ {self.right.to_rml()})"
-
-class NotNode(ASTNode):
-    def __init__(self, node: ASTNode):
-        self.node = node
-
-    def to_rml(self) -> str:
-        # Apply negation at runtime (handled outside depending on match type)
-        return f"(not {self.node.to_rml()})"
-

@@ -1,0 +1,3 @@
+logsource matches {product: 'windows', category: 'process_creation'};
+no_selection not matches {image: 'C:\\Windows\\System32\\cmd.exe', parentimage: 'C:\\Program Files\\SomeApp\\suspicious.exe', commandline: 'cmd.exe /c whoami'};
+Main = logsource >> (no_selection (Main \/ empty));

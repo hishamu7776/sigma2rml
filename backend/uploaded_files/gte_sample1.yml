@@ -1,0 +1,10 @@
+title: Detect Brute Force Attempts
+id: example-loginattempts-gte
+description: Detect when login attempts exceed threshold
+logsource:
+  category: authentication
+detection:
+  selection:
+    LoginAttempts|gte: 5
+  condition: selection
+level: high

@@ -1,2 +1,3 @@
-// Translation not supported due to:
-// Translation not supported: Modifier(s) ['endswith'] not supported yet
+logsource matches {product: 'linux', category: 'process_creation'};
+no_selection not matches {};
+Main = logsource >> (no_selection (Main \/ empty));

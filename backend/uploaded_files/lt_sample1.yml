@@ -1,0 +1,10 @@
+title: Detect Very Low Process IDs
+id: example-low-processid-lt
+description: Detect system processes with very low Process IDs
+logsource:
+  category: process_creation
+detection:
+  selection:
+    ProcessId|lt: 100
+  condition: selection
+level: low

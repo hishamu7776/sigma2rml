@@ -1,0 +1,20 @@
+title: Detect Suspicious Scripting Activity
+id: example-scripting-multi-selection
+description: Detect either cmd.exe or powershell suspicious activity
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection1:
+    ParentImage: 'C:\\Program Files\\SomeApp\\suspicious.exe'
+    Image:
+      - 'C:\\Windows\\System32\\cmd.exe'
+      - 'C:\\Windows\\SysWOW64\\cmd.exe'
+  selection2:
+    ParentImage: 'C:\\Windows\\System32\\cmd.exe'
+    User: 'Administrator'
+    CommandLine:
+      - 'powershell.exe -enc'
+      - 'powershell.exe Invoke-Expression'
+  condition: selection1 and selection2
+level: critical

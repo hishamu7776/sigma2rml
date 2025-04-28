@@ -1,0 +1,6 @@
+logsource matches {product: 'windows', category: 'process_creation'};
+no_selection11 not matches {parentimage: 'C:\\Program Files\\SomeApp\\suspicious.exe', image: 'C:\\Windows\\System32\\cmd.exe'};
+no_selection12 not matches {parentimage: 'C:\\Program Files\\SomeApp\\suspicious.exe', image: 'C:\\Windows\\SysWOW64\\cmd.exe'};
+no_selection21 not matches {parentimage: 'C:\\Windows\\System32\\cmd.exe', user: 'Administrator', commandline: 'powershell.exe -enc'};
+no_selection22 not matches {parentimage: 'C:\\Windows\\System32\\cmd.exe', user: 'Administrator', commandline: 'powershell.exe Invoke-Expression'};
+Main = logsource >> (((no_selection11 \/ no_selection12) /\ (no_selection21 \/ no_selection22)) (Main \/ empty));

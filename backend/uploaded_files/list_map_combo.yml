@@ -1,0 +1,14 @@
+title: Detect Cmd with Specific Parent or Locations
+id: example-cmd-single-multi
+description: Detect cmd.exe executed from specific locations or by specific parent
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    ParentImage: 'C:\\Program Files\\SomeApp\\suspicious.exe'   # Single value
+    Image:
+      - 'C:\\Windows\\System32\\cmd.exe'
+      - 'C:\\Windows\\SysWOW64\\cmd.exe'                       # Multiple values
+  condition: selection
+level: high

@@ -1,0 +1,13 @@
+logsource matches {product: 'windows', category: 'file_event'};
+no_selection not matches {};
+no_filter_main_office not matches {};
+no_filter_optional_ldapwhoami not matches {};
+no_filter_optional_citrix not matches {};
+// Translation not supported: Modifier(s) ['contains'] not supported yet under field 'TargetFilename'
+// Translation not supported: Modifier(s) ['endswith'] not supported yet under field 'TargetFilename'
+// Translation not supported: Unsupported structure under 'filter_main_generic' (non-string list)
+// Translation not supported: Modifier(s) ['contains', 'all'] not supported yet under field 'Image'
+// Translation not supported: Modifier(s) ['endswith'] not supported yet under field 'Image'
+// Translation not supported: Modifier(s) ['endswith'] not supported yet under field 'Image'
+// Translation not supported: Modifier(s) ['endswith'] not supported yet under field 'Image'
+Main = logsource >> ((no_selection /\ (~// Translation not supported: Unknown name: 1)) (Main \/ empty));

@@ -1,0 +1,3 @@
+logsource matches {category: 'authentication'};
+no_selection not matches {loginattempts: x} with x >= 5;
+Main = logsource >> (no_selection (Main \/ empty));

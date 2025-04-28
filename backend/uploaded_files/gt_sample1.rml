@@ -1,0 +1,3 @@
+logsource matches {category: 'process_creation'};
+no_selection not matches {processid: x} with x > 5000;
+Main = logsource >> (no_selection (Main \/ empty));

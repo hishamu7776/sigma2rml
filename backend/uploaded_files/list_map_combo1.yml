@@ -1,0 +1,15 @@
+title: Detect PowerShell Invocations with Specific Command Line
+id: example-powershell-invoke
+description: Detect PowerShell executions with specific command lines and paths
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    ParentImage: 'C:\\Windows\\System32\\cmd.exe'             # Single value
+    User: 'Administrator'                                    # Single value
+    CommandLine:
+      - 'powershell.exe -enc'
+      - 'powershell.exe Invoke-Expression'
+  condition: selection
+level: high

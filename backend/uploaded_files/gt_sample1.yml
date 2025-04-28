@@ -1,0 +1,10 @@
+title: Detect High Process IDs
+id: example-high-processid-gt
+description: Detect processes with ProcessId greater than 5000
+logsource:
+  category: process_creation
+detection:
+  selection:
+    ProcessId|gt: 5000
+  condition: selection
+level: medium

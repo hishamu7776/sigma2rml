@@ -1,0 +1,5 @@
+logsource matches {product: 'windows', category: 'sysmon_status'};
+no_selection_stop not matches {state: 'Stopped'};
+no_selection_conf1 not matches {selection_conf: 'Sysmon config state changed'};
+no_filter not matches {state: 'Started'};
+Main = logsource >> (// Translation not supported: Unknown name: 1 (Main \/ empty));

@@ -1,0 +1,3 @@
+logsource matches {product: 'windows', category: 'network_connection'};
+no_selection not matches {destinationport: x, destinationport: y, responsetime: z} with x >= 1024 && y <= 65535 && z < 100;
+Main = logsource >> (no_selection (Main \/ empty));

@@ -1,0 +1,4 @@
+logsource matches {product: 'windows', category: 'process_creation'};
+no_selection1 not matches {parentimage: 'C:\\Windows\\System32\\cmd.exe', user: 'Administrator', commandline: 'powershell.exe -enc'};
+no_selection2 not matches {parentimage: 'C:\\Windows\\System32\\cmd.exe', user: 'Administrator', commandline: 'powershell.exe Invoke-Expression'};
+Main = logsource >> (no_selection2 (Main \/ empty));

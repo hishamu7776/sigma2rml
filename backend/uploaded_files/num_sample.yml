@@ -1,0 +1,13 @@
+title: Detect High Port Fast Connections
+id: example-highport-fastconn
+description: Detect outgoing network connections to high ports with fast responses
+logsource:
+  product: windows
+  category: network_connection
+detection:
+  selection:
+    DestinationPort|gte: 1024
+    DestinationPort|lte: 65535
+    ResponseTime|lt: 100
+  condition: selection
+level: medium
