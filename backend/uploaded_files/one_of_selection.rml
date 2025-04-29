@@ -1,0 +1,5 @@
+logsource matches {category: 'generic'};
+no_selection_field1 not matches {field1: 'value1'};
+no_selection_field2 not matches {field2: 'value2'};
+no_selection_field3 not matches {field3: 'value3'};
+Main = logsource >> ((no_selection_field1 \/ no_selection_field2 \/ no_selection_field3) (Main \/ empty));

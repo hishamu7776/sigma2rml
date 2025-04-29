@@ -24,12 +24,21 @@ class OrNode(ASTNode):
     def to_rml(self) -> str:
         return "(" + " \\/ ".join(node.to_rml() for node in self.nodes) + ")"
 
+# inside nodes.py
+
 class NotNode(ASTNode):
     def __init__(self, node):
         self.node = node
 
     def to_rml(self) -> str:
-        return "(~" + self.node.to_rml() + ")"
+        inner = self.node.to_rml()
+
+        if isinstance(self.node, NameNode) and self.node.name.startswith("no_"):
+            # remove 'no_' if it's no_selection type
+            return self.node.name[3:]
+        else:
+            return "(~" + inner + ")"
+
 
 # ----------------------------------------
 # Reference node for match names

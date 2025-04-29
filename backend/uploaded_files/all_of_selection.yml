@@ -1,0 +1,14 @@
+title: Detect if all conditions are true
+id: example-allof-selection
+description: Match if all field conditions are satisfied
+logsource:
+  category: generic
+detection:
+  selection_field1:
+    field1: 'value1'
+  selection_field2:
+    field2: 'value2'
+  selection_field3:
+    field3: 'value3'
+  condition: all of selection_field*
+level: high

@@ -1,0 +1,14 @@
+title: Detect if any one condition is true
+id: example-1of-selection
+description: Match if at least one field condition is satisfied
+logsource:
+  category: generic
+detection:
+  selection_field1:
+    field1: 'value1'
+  selection_field2:
+    field2: 'value2'
+  selection_field3:
+    field3: 'value3'
+  condition: 1 of selection_field*
+level: medium

@@ -13,8 +13,20 @@ def view_file(filename: str):
     record = get_file_record(filename)
     if not record:
         raise HTTPException(status_code=404, detail="File not found")
-    with open(record["path"], "r") as f:
-        return {"filename": filename, "content": f.read()}
+    
+    try:
+        with open(record["path"], "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to read file")
+    
+    return {
+        "filename": filename,
+        "title": record.get("title", "Untitled Rule"),
+        "translated": record.get("translated", False),
+        "rml_path": record.get("rml_path", None),
+        "content": content
+    }
 
 @file_router.get("/rml/{filename}")
 def view_rml(filename: str):

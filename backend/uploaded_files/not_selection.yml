@@ -1,0 +1,10 @@
+title: Detect events that do NOT match a specific pattern
+id: example-not-selection
+description: Match if field does NOT have forbidden value
+logsource:
+  category: generic
+detection:
+  forbidden_selection:
+    field1: 'forbidden_value'
+  condition: not forbidden_selection
+level: low

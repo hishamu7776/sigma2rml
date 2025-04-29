@@ -1,0 +1,3 @@
+logsource matches {category: 'generic'};
+no_forbidden_selection not matches {field1: 'forbidden_value'};
+Main = logsource >> (forbidden_selection (Main \/ empty));

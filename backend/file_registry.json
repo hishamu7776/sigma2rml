@@ -138,5 +138,33 @@
     "title": "Detect Suspicious Scripting Activity Or",
     "translated": true,
     "rml_path": "uploaded_files\\list_map_combo3.rml"
+  },
+  {
+    "filename": "complex_detection_example.yml",
+    "path": "uploaded_files\\complex_detection_example.yml",
+    "title": "Complex detection example",
+    "translated": false,
+    "rml_path": null
+  },
+  {
+    "filename": "all_of_selection.yml",
+    "path": "uploaded_files\\all_of_selection.yml",
+    "title": "Detect if all conditions are true",
+    "translated": true,
+    "rml_path": "uploaded_files\\all_of_selection.rml"
+  },
+  {
+    "filename": "one_of_selection.yml",
+    "path": "uploaded_files\\one_of_selection.yml",
+    "title": "Detect if any one condition is true",
+    "translated": true,
+    "rml_path": "uploaded_files\\one_of_selection.rml"
+  },
+  {
+    "filename": "not_selection.yml",
+    "path": "uploaded_files\\not_selection.yml",
+    "title": "Detect events that do NOT match a specific pattern",
+    "translated": true,
+    "rml_path": "uploaded_files\\not_selection.rml"
   }
 ]

@@ -19,14 +19,14 @@ class ConditionParser:
         """
         Splits condition text into tokens (words, parentheses, etc.)
         """
-        return re.findall(r'\w+\*?|\(|\)|and|or|not|all of|any of|[\*]', text, flags=re.IGNORECASE)
+        return re.findall(r'all of them|any of them|all of|any of|1 of|\w+\*?|\(|\)|and|or|not', text, flags=re.IGNORECASE)
 
     def current_token(self):
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
 
     def eat(self, token=None):
         current = self.current_token()
-        if token is None or current == token:
+        if token is None or (current and current.lower() == token.lower()):
             self.pos += 1
             return current
         else:
@@ -38,7 +38,7 @@ class ConditionParser:
         """
         node = self.term()
 
-        while self.current_token() == 'or':
+        while self.current_token() and self.current_token().lower() == 'or':
             self.eat('or')
             right = self.term()
             node = OrNode([self.safe_wrap(node), self.safe_wrap(right)])
@@ -51,7 +51,7 @@ class ConditionParser:
         """
         node = self.factor()
 
-        while self.current_token() == 'and':
+        while self.current_token() and self.current_token().lower() == 'and':
             self.eat('and')
             right = self.factor()
             node = AndNode([self.safe_wrap(node), self.safe_wrap(right)])
@@ -64,7 +64,12 @@ class ConditionParser:
         """
         token = self.current_token()
 
-        if token == 'not':
+        if not token:
+            raise ValueError("Unexpected end of tokens")
+
+        token_lower = token.lower()
+
+        if token_lower == 'not':
             self.eat('not')
             node = self.factor()
             return NotNode(self.safe_wrap(node))
@@ -75,30 +80,32 @@ class ConditionParser:
             self.eat(')')
             return node
 
-        elif token == 'any of':
+        elif token_lower in ('any of', '1 of'):
             return self.any_all_of_node(any_of=True)
 
-        elif token == 'all of':
+        elif token_lower == 'all of':
             return self.any_all_of_node(any_of=False)
 
-        elif token:
-            name = self.eat()
-            return self.resolve_name(name)
+        elif token_lower == 'any of them':
+            return self.all_any_of_them_node(any_of=True)
+
+        elif token_lower == 'all of them':
+            return self.all_any_of_them_node(any_of=False)
 
         else:
-            raise ValueError("Unexpected end of tokens")
+            name = self.eat()
+            return self.resolve_name(name)
 
     def resolve_name(self, name):
         """
         Resolve a selection name into appropriate AST node:
-        - If multiple matches: wrap into ORNode
+        - If multiple matches: wrap into OR
         - If one match: NameNode directly
         - If not found: UnsupportedNode
         """
         if name in self.available_names:
             value = self.available_names[name]
 
-        # Fix: if value is a list -> group as OR
             if isinstance(value, list):
                 if len(value) == 1:
                     return NameNode(value[0])
@@ -116,10 +123,10 @@ class ConditionParser:
 
     def any_all_of_node(self, any_of=True):
         """
-        Handle 'any of selection*' and 'all of selection*'
+        Handle 'any of selection*', '1 of selection*', and 'all of selection*'
         """
         if any_of:
-            self.eat('any of')
+            self.eat('any of') if self.current_token().lower() == 'any of' else self.eat('1 of')
         else:
             self.eat('all of')
 
@@ -127,7 +134,7 @@ class ConditionParser:
 
         matching = []
         for name, mapped in self.available_names.items():
-            if name.startswith(pattern[:-1]):  # remove trailing *
+            if pattern.endswith('*') and name.startswith(pattern[:-1]):
                 if isinstance(mapped, list):
                     matching.extend(NameNode(m) for m in mapped)
                 else:
@@ -135,6 +142,30 @@ class ConditionParser:
 
         if not matching:
             return UnsupportedNode(f"No matching names for pattern {pattern}")
+
+        if any_of:
+            return OrNode(matching)
+        else:
+            return AndNode(matching)
+
+    def all_any_of_them_node(self, any_of=True):
+        """
+        Handle 'any of them' and 'all of them'
+        """
+        if any_of:
+            self.eat('any of them')
+        else:
+            self.eat('all of them')
+
+        matching = []
+        for name, mapped in self.available_names.items():
+            if isinstance(mapped, list):
+                matching.extend(NameNode(m) for m in mapped)
+            else:
+                matching.append(NameNode(mapped))
+
+        if not matching:
+            return UnsupportedNode(f"No names found for 'them' pattern")
 
         if any_of:
             return OrNode(matching)

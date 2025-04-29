@@ -1,0 +1,18 @@
+title: Complex detection example
+id: example-big-combination
+description: (1 of selectionA* and all of selectionB*) and not selectionC
+logsource:
+  category: generic
+detection:
+  selectionA1:
+    field1: 'x'
+  selectionA2:
+    field2: 'y'
+  selectionB1:
+    field3: 'z'
+  selectionB2:
+    field4: 'w'
+  selectionC:
+    field5: 'bad'
+  condition: (1 of selectionA* and all of selectionB*) and not selectionC
+level: critical

@@ -1,2 +1,4 @@
-// Translation not supported due to:
-// Translation not supported: Modifier(s) ['contains'] not supported yet
+logsource matches {product: 'linux', category: 'network_connection'};
+no_selection not matches {};
+// Translation not supported: Modifier(s) ['contains'] not supported yet under field 'DestinationHostname'
+Main = logsource >> (no_selection (Main \/ empty));
