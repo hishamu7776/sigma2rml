@@ -1,132 +1,285 @@
-from .base import ASTNode
+# backend/app/core/ast/nodes.py
 
-def format_value(val):
-    if isinstance(val, (int, float)):
-        return str(val)
-    return f"'{val}'"
+import re
 
-
-# ----------------------------------------
-# Logical nodes (AND, OR, NOT)
-# ----------------------------------------
-
-class AndNode(ASTNode):
-    def __init__(self, nodes):
-        self.nodes = nodes
-
+class ASTNode:
+    """Base class for all AST nodes"""
+    
     def to_rml(self) -> str:
-        return "(" + " /\\ ".join(node.to_rml() for node in self.nodes) + ")"
+        """Convert node to RML representation"""
+        raise NotImplementedError("Subclasses must implement to_rml")
 
-class OrNode(ASTNode):
-    def __init__(self, nodes):
-        self.nodes = nodes
-
+class LogsourceNode(ASTNode):
+    """Represents the logsource section"""
+    
+    def __init__(self, product: str = None, service: str = None, category: str = None):
+        self.product = product
+        self.service = service
+        self.category = category
+    
     def to_rml(self) -> str:
-        return "(" + " \\/ ".join(node.to_rml() for node in self.nodes) + ")"
-
-# inside nodes.py
-
-class NotNode(ASTNode):
-    def __init__(self, node):
-        self.node = node
-
-    def to_rml(self) -> str:
-        inner = self.node.to_rml()
-
-        if isinstance(self.node, NameNode) and self.node.name.startswith("no_"):
-            # remove 'no_' if it's no_selection type
-            return self.node.name[3:]
+        """Convert logsource to RML format: logsource matches {product: 'windows', service: 'security'};"""
+        parts = []
+        if self.product:
+            parts.append(f"product: '{self.product}'")
+        if self.service:
+            parts.append(f"service: '{self.service}'")
+        if self.category:
+            parts.append(f"category: '{self.category}'")
+        
+        if parts:
+            return f"logsource matches {{{', '.join(parts)}}};"
         else:
-            return "(~" + inner + ")"
+            return "// No logsource specified"
 
-
-# ----------------------------------------
-# Reference node for match names
-# ----------------------------------------
-
-class NameNode(ASTNode):
-    def __init__(self, name):
+class SelectionNode(ASTNode):
+    """Represents a selection (detection rule)"""
+    
+    def __init__(self, name: str, fields: dict):
         self.name = name
-
-    def to_rml(self) -> str:
-        return self.name
-
-# ----------------------------------------
-# Matches and Filters
-# ----------------------------------------
-
-class LogsourceFilterNode(ASTNode):
-    def __init__(self, fields):
         self.fields = fields
-
+    
     def to_rml(self) -> str:
-        conditions = ', '.join(f"{k.lower()}: {self._format_value(v)}" for k, v in self.fields.items())
-        return f"logsource matches {{{conditions}}};"
-
-    def _format_value(self, val):
-        if isinstance(val, (int, float)):
-            return str(val)
-        return f"'{val}'"
+        """Convert selection to RML format: selection matches {eventid: 4663, accesses: 'DELETE'};"""
+        field_pairs = []
+        for field, value in self.fields.items():
+            if isinstance(value, list):
+                # Handle list values with OR operator
+                if all(isinstance(v, str) for v in value):
+                    quoted_values = [f"'{v}'" for v in value]
+                    field_pairs.append(f"{field.lower()}: {' | '.join(quoted_values)}")
+                else:
+                    field_pairs.append(f"{field.lower()}: {' | '.join(str(v) for v in value)}")
+            elif isinstance(value, str):
+                field_pairs.append(f"{field.lower()}: '{value}'")
+            else:
+                field_pairs.append(f"{field.lower()}: '{value}'")
+        
+        return f"{self.name} matches {{{', '.join(field_pairs)}}};"
+    
+    def to_rml_content(self) -> str:
+        """Return just the content part without the selection name"""
+        field_pairs = []
+        for field, value in self.fields.items():
+            if isinstance(value, list):
+                # Handle list values with OR operator
+                if all(isinstance(v, str) for v in value):
+                    quoted_values = [f"'{v}'" for v in value]
+                    field_pairs.append(f"{field.lower()}: {' | '.join(quoted_values)}")
+                else:
+                    field_pairs.append(f"{field.lower()}: {' | '.join(str(v) for v in value)}")
+            elif isinstance(value, str):
+                field_pairs.append(f"{field.lower()}: '{value}'")
+            else:
+                field_pairs.append(f"{field.lower()}: {value}")
+        
+        return f"{{{', '.join(field_pairs)}}}"
 
 class ExistsNode(ASTNode):
-    def __init__(self, field):
-        self.field = field.lower()
-
+    """Represents an exists statement"""
+    
+    def __init__(self, field: str):
+        self.field = field
+    
     def to_rml(self) -> str:
-        return f"exists matches {{{self.field}: _}};"
+        """Convert exists to RML format"""
+        return f"// exists: {self.field}"
 
-class SimpleMatchNode(ASTNode):
-    def __init__(self, name, fields, positive=True):
+class MatchNode(ASTNode):
+    """Represents a match statement"""
+    
+    def __init__(self, name: str, fields: dict):
         self.name = name
         self.fields = fields
-        self.positive = positive
-
+    
     def to_rml(self) -> str:
-        fields = ', '.join(f"{k.lower()}: {self._format_value(v)}" for k, v in self.fields.items())
-        if self.positive:
-            return f"{self.name} matches {{{fields}}};"
+        """Convert match to RML format: selection matches {eventid: 4663, accesses: 'DELETE'};"""
+        field_pairs = []
+        for field, value in self.fields.items():
+            if isinstance(value, list):
+                # Handle list values with OR operator
+                if all(isinstance(v, str) for v in value):
+                    quoted_values = [f"'{v}'" for v in value]
+                    field_pairs.append(f"{field.lower()}: {' | '.join(quoted_values)}")
+                else:
+                    field_pairs.append(f"{field.lower()}: {' | '.join(str(v) for v in value)}")
+            elif isinstance(value, str):
+                field_pairs.append(f"{field.lower()}: '{value}'")
+            else:
+                # Check for comparison operators (only support lt, lte, gt, gte)
+                if '|' in str(field):
+                    base_field, operator = field.split('|', 1)
+                    if operator in ['lt', 'lte', 'gt', 'gte']:
+                        # Generate RML with comparison: {field: x} with x <= value
+                        field_pairs.append(f"{base_field.lower()}: x")
+                    else:
+                        # Unsupported modifier - mark as unsupported
+                        field_pairs.append(f"// UNSUPPORTED MODIFIER: {field.lower()}: {value} ({operator} not supported)")
+                else:
+                    field_pairs.append(f"{field.lower()}: {value}")
+        
+        return f"{self.name} matches {{{', '.join(field_pairs)}}};"
+    
+    def to_rml_content(self) -> str:
+        """Return just the content part without the selection name"""
+        field_pairs = []
+        for field, value in self.fields.items():
+            if isinstance(value, list):
+                # Handle list values with OR operator
+                if all(isinstance(v, str) for v in value):
+                    quoted_values = [f"'{v}'" for v in value]
+                    field_pairs.append(f"{field.lower()}: {' | '.join(quoted_values)}")
+                else:
+                    field_pairs.append(f"{field.lower()}: {' | '.join(str(v) for v in value)}")
+            elif isinstance(value, str):
+                field_pairs.append(f"{field.lower()}: '{value}'")
+            else:
+                field_pairs.append(f"{field.lower()}: {value}")
+        
+        return f"{{{', '.join(field_pairs)}}}"
+    
+    def get_comparison_constraints(self) -> list:
+        """Get comparison constraints for fields with supported operators (lt, lte, gt, gte)"""
+        constraints = []
+        for field, value in self.fields.items():
+            if '|' in str(field):
+                base_field, operator = field.split('|', 1)
+                if operator in ['lt', 'lte', 'gt', 'gte']:
+                    # Convert operator to RML syntax
+                    if operator == 'lt':
+                        rml_op = '<'
+                    elif operator == 'lte':
+                        rml_op = '<='
+                    elif operator == 'gt':
+                        rml_op = '>'
+                    elif operator == 'gte':
+                        rml_op = '>='
+                    else:
+                        rml_op = '='
+                    
+                    constraints.append(f"{base_field.lower()}: x with x {rml_op} {value}")
+                # Note: Unsupported modifiers are handled in to_rml() method
+        
+        return constraints
+
+class AndNode(ASTNode):
+    """Represents logical AND operation"""
+    
+    def __init__(self, left: ASTNode, right: ASTNode):
+        self.left = left
+        self.right = right
+    
+    def to_rml(self) -> str:
+        """Convert AND to RML format"""
+        left_str = self.left.to_rml()
+        right_str = self.right.to_rml()
+        return f"({left_str} /\\ {right_str})"
+
+class OrNode(ASTNode):
+    """Represents logical OR operation"""
+    
+    def __init__(self, left: ASTNode, right: ASTNode):
+        self.left = left
+        self.right = right
+    
+    def to_rml(self) -> str:
+        """Convert OR to RML format"""
+        left_str = self.left.to_rml()
+        right_str = self.right.to_rml()
+        return f"({left_str} \\/ {right_str})"
+
+class NotNode(ASTNode):
+    """Represents logical NOT operation"""
+    
+    def __init__(self, operand: ASTNode):
+        self.operand = operand
+    
+    def to_rml(self) -> str:
+        """Convert NOT to RML format"""
+        inner = self.operand.to_rml()
+        if isinstance(self.operand, (NameNode, MatchNode)):
+            # For simple nodes, use proper negation
+            return "(~" + inner + ")"
         else:
-            return f"{self.name} not matches {{{fields}}};"
+            # For other nodes, use proper negation
+            return "(~" + inner + ")"
 
-    def _format_value(self, val):
-        if isinstance(val, (int, float)):
-            return str(val)
-        return f"'{val}'"
-
-class ComparisonMatchNode(ASTNode):
-    def __init__(self, name):
+class NameNode(ASTNode):
+    """Represents a simple identifier"""
+    
+    def __init__(self, name: str):
         self.name = name
-        self.fields = []  # list of (field, varname, operator, value)
-
-    def add_condition(self, field, operator, value):
-        var = 'x' if len(self.fields) == 0 else chr(ord('x') + len(self.fields))
-        self.fields.append((field.lower(), var, operator, value))
-
+    
     def to_rml(self) -> str:
-        field_mapping = ', '.join(f"{field}: {var}" for field, var, _, _ in self.fields)
-        conditions = ' && '.join(f"{var} {self._operator_symbol(op)} {self._format_value(val)}" for _, var, op, val in self.fields)
-        return f"{self.name} not matches {{{field_mapping}}} with {conditions};"
+        """Convert name to RML format"""
+        return self.name
 
-    def _operator_symbol(self, op):
-        return {
-            'gt': '>',
-            'gte': '>=',
-            'lt': '<',
-            'lte': '<='
-        }.get(op, '??')
+class QuantifierNode(ASTNode):
+    """Represents quantifiers like 'all of them', '1 of selection*'"""
+    
+    def __init__(self, quantifier: str, selections: list):
+        self.quantifier = quantifier
+        self.selections = selections
+    
+    def to_rml(self) -> str:
+        """Convert quantifier to RML format"""
+        if self.quantifier == "all of them":
+            # all of them becomes (safe_selection1 \/ safe_selection2)*
+            safe_selections = [f"safe_{sel}" for sel in self.selections]
+            return f"({' \\/ '.join(safe_selections)})*"
+        elif self.quantifier == "1 of":
+            # 1 of becomes (safe_selection1 /\ safe_selection2)*
+            safe_selections = [f"safe_{sel}" for sel in self.selections]
+            return f"({' /\\ '.join(safe_selections)})*"
+        elif re.match(r'\d+ of', self.quantifier):
+            # Extract the number
+            match = re.match(r'(\d+) of', self.quantifier)
+            if match:
+                n = int(match.group(1))
+                if n == 1:
+                    # 1 of becomes (safe_selection1 /\ safe_selection2)*
+                    safe_selections = [f"safe_{sel}" for sel in self.selections]
+                    return f"({' /\\ '.join(safe_selections)})*"
+                else:
+                    # For other numbers, use OR pattern
+                    safe_selections = [f"safe_{sel}" for sel in self.selections]
+                    return f"({' \\/ '.join(safe_selections)})*"
+        else:
+            # Default fallback
+            return f"// Quantifier: {self.quantifier} of {self.selections}"
 
-    def _format_value(self, val):
-        if isinstance(val, (int, float)):
-            return str(val)
-        return f"'{val}'"
-
-# ----------------------------------------
-# Unsupported node for fallback
-# ----------------------------------------
+class TemporalNode(ASTNode):
+    """Represents temporal operators like '| near', '| count'"""
+    
+    def __init__(self, selection1: str, operator: str, selection2: str = None, timeframe: str = None, count: int = None):
+        self.selection1 = selection1
+        self.operator = operator
+        self.selection2 = selection2
+        self.timeframe = timeframe or "10s"  # Default 10 seconds
+        self.count = count
+    
+    def to_rml(self) -> str:
+        """Convert temporal to RML format"""
+        if self.operator == "near":
+            return f"temporal_near({self.selection1}, {self.selection2}, {self.timeframe})"
+        elif self.operator == "before":
+            return f"temporal_before({self.selection1}, {self.selection2}, {self.timeframe})"
+        elif self.operator == "after":
+            return f"temporal_after({self.selection1}, {self.selection2}, {self.timeframe})"
+        elif self.operator == "within":
+            return f"temporal_within({self.selection1}, {self.selection2}, {self.timeframe})"
+        elif self.operator == "count":
+            return f"temporal_count({self.selection1}, {self.count}, {self.timeframe})"
+        else:
+            return f"// Unknown temporal operator: {self.operator}"
 
 class UnsupportedNode(ASTNode):
-    def __init__(self, reason):
-        self.reason = reason
-
+    """Represents unsupported features"""
+    
+    def __init__(self, feature: str, description: str = ""):
+        self.feature = feature
+        self.description = description
+    
     def to_rml(self) -> str:
-        return f"// Translation not supported: {self.reason}"
+        """Convert unsupported to RML format"""
+        return f"// Unsupported feature: {self.feature} {self.description}"

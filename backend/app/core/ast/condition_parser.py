@@ -1,28 +1,87 @@
 import re
-from .nodes import AndNode, OrNode, NotNode, NameNode, UnsupportedNode
+from .nodes import AndNode, OrNode, NotNode, NameNode, UnsupportedNode, TemporalNode, QuantifierNode
 
 class ConditionParser:
     def __init__(self, available_names):
         """
-        available_names: mapping like selection1 -> [no_selection11, no_selection12]
+        available_names: list of selection names
         """
         self.available_names = available_names
         self.tokens = []
         self.pos = 0
+        self.temporal_operators = ['near', 'before', 'after', 'within']
 
     def parse(self, condition_str):
+        """Main parsing entry point - start with condition to understand structure"""
+        if not condition_str:
+            return UnsupportedNode("No condition specified")
+        
         self.tokens = self.tokenize(condition_str)
         self.pos = 0
         return self.expression()
 
     def tokenize(self, text):
         """
-        Splits condition text into tokens (words, parentheses, etc.)
+        Enhanced tokenization that handles complex Sigma patterns
         """
-        return re.findall(r'all of them|any of them|all of|any of|1 of|\w+\*?|\(|\)|and|or|not', text, flags=re.IGNORECASE)
+        # More comprehensive pattern matching
+        patterns = [
+            r'all of them',
+            r'any of them', 
+            r'all of',
+            r'any of',
+            r'1 of',
+            r'2 of',
+            r'3 of',
+            r'4 of',
+            r'5 of',
+            r'6 of',
+            r'7 of',
+            r'8 of',
+            r'9 of',
+            r'\d+ of',
+            r'\w+\*',  # selection* 
+            r'\(', r'\)',
+            r'and', r'or', r'not',
+            r'\|',  # temporal operator separator
+            r'near', r'before', r'after', r'within', r'count',
+            r'>\d+',  # comparison operators with numbers (must come before [<>]=?)
+            r'[<>]=?',  # comparison operators
+            r'\w+',  # identifiers
+            r'[^\s]+'  # catch any remaining tokens
+        ]
+        
+        # Join patterns and find all matches
+        pattern = '|'.join(patterns)
+        tokens = re.findall(pattern, text, flags=re.IGNORECASE)
+        
+        # Clean up tokens and handle special cases
+        cleaned_tokens = []
+        i = 0
+        while i < len(tokens):
+            token = tokens[i].strip()
+            if not token:
+                i += 1
+                continue
+            
+            # Handle numbered quantifiers
+            if re.match(r'\d+ of', token, re.IGNORECASE):
+                cleaned_tokens.append(token)
+                i += 1
+                continue
+                
+            cleaned_tokens.append(token)
+            i += 1
+            
+        return cleaned_tokens
 
     def current_token(self):
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
+
+    def peek_token(self, offset=1):
+        """Look ahead at tokens without consuming them"""
+        peek_pos = self.pos + offset
+        return self.tokens[peek_pos] if peek_pos < len(self.tokens) else None
 
     def eat(self, token=None):
         current = self.current_token()
@@ -34,148 +93,137 @@ class ConditionParser:
 
     def expression(self):
         """
-        Parse expression with OR precedence
+        Parse expression with OR precedence: expr OR expr OR expr
         """
         node = self.term()
 
         while self.current_token() and self.current_token().lower() == 'or':
             self.eat('or')
             right = self.term()
-            node = OrNode([self.safe_wrap(node), self.safe_wrap(right)])
+            node = OrNode(node, right)
 
         return node
 
     def term(self):
         """
-        Parse term with AND precedence
+        Parse term with AND precedence: term AND term AND term
         """
         node = self.factor()
 
         while self.current_token() and self.current_token().lower() == 'and':
             self.eat('and')
             right = self.factor()
-            node = AndNode([self.safe_wrap(node), self.safe_wrap(right)])
+            node = AndNode(node, right)
 
         return node
 
     def factor(self):
         """
-        Parse factor: not / parentheses / base item
+        Parse factor: NOT factor | (expression) | identifier | quantifier
         """
         token = self.current_token()
-
+        
         if not token:
-            raise ValueError("Unexpected end of tokens")
-
-        token_lower = token.lower()
-
-        if token_lower == 'not':
+            raise ValueError("Unexpected end of input")
+        
+        if token.lower() == 'not':
             self.eat('not')
-            node = self.factor()
-            return NotNode(self.safe_wrap(node))
-
+            operand = self.factor()
+            return NotNode(operand)
+        
         elif token == '(':
             self.eat('(')
-            node = self.expression()
-            self.eat(')')
-            return node
-
-        elif token_lower in ('any of', '1 of'):
-            return self.any_all_of_node(any_of=True)
-
-        elif token_lower == 'all of':
-            return self.any_all_of_node(any_of=False)
-
-        elif token_lower == 'any of them':
-            return self.all_any_of_them_node(any_of=True)
-
-        elif token_lower == 'all of them':
-            return self.all_any_of_them_node(any_of=False)
-
-        else:
-            name = self.eat()
-            return self.resolve_name(name)
-
-    def resolve_name(self, name):
-        """
-        Resolve a selection name into appropriate AST node:
-        - If multiple matches: wrap into OR
-        - If one match: NameNode directly
-        - If not found: UnsupportedNode
-        """
-        if name in self.available_names:
-            value = self.available_names[name]
-
-            if isinstance(value, list):
-                if len(value) == 1:
-                    return NameNode(value[0])
-                else:
-                    return OrNode([NameNode(v) for v in value])
-
-            elif isinstance(value, str):
-                return NameNode(value)
-
+            expr = self.expression()
+            if self.current_token() == ')':
+                self.eat(')')
+                return expr
             else:
-                return UnsupportedNode(f"Unsupported mapping for name {name}")
-
-        else:
-            return UnsupportedNode(f"Unknown name: {name}")
-
-    def any_all_of_node(self, any_of=True):
-        """
-        Handle 'any of selection*', '1 of selection*', and 'all of selection*'
-        """
-        if any_of:
-            self.eat('any of') if self.current_token().lower() == 'any of' else self.eat('1 of')
-        else:
-            self.eat('all of')
-
-        pattern = self.eat()
-
-        matching = []
-        for name, mapped in self.available_names.items():
-            if pattern.endswith('*') and name.startswith(pattern[:-1]):
-                if isinstance(mapped, list):
-                    matching.extend(NameNode(m) for m in mapped)
+                raise ValueError("Expected closing parenthesis")
+        
+        elif token.lower() in ['all of them', 'any of them']:
+            self.eat()
+            return QuantifierNode(token.lower(), self.available_names)
+        
+        elif re.match(r'\d+ of', token, re.IGNORECASE):
+            self.eat()
+            # Look for selection* pattern
+            if self.current_token() and self.current_token().endswith('*'):
+                selection = self.eat()
+                # Extract the base name without the *
+                base_name = selection[:-1]
+                # Find all available names that start with this base name
+                matching_names = [name for name in self.available_names if name.startswith(base_name)]
+                if matching_names:
+                    return QuantifierNode(token.lower(), matching_names)
                 else:
-                    matching.append(NameNode(mapped))
-
-        if not matching:
-            return UnsupportedNode(f"No matching names for pattern {pattern}")
-
-        if any_of:
-            return OrNode(matching)
-        else:
-            return AndNode(matching)
-
-    def all_any_of_them_node(self, any_of=True):
-        """
-        Handle 'any of them' and 'all of them'
-        """
-        if any_of:
-            self.eat('any of them')
-        else:
-            self.eat('all of them')
-
-        matching = []
-        for name, mapped in self.available_names.items():
-            if isinstance(mapped, list):
-                matching.extend(NameNode(m) for m in mapped)
+                    return QuantifierNode(token.lower(), [base_name])
             else:
-                matching.append(NameNode(mapped))
-
-        if not matching:
-            return UnsupportedNode(f"No names found for 'them' pattern")
-
-        if any_of:
-            return OrNode(matching)
+                return QuantifierNode(token.lower(), [])
+        
+        elif token.endswith('*'):
+            # Handle selection* pattern
+            self.eat()
+            base_name = token[:-1]  # Remove the *
+            # Find all available names that start with this base name
+            matching_names = [name for name in self.available_names if name.startswith(base_name)]
+            if matching_names:
+                return QuantifierNode("all of", matching_names)
+            else:
+                return QuantifierNode("all of", [base_name])
+        
+        elif token in self.available_names:
+            self.eat()
+            # Check if this is followed by a temporal operator
+            if self.current_token() == '|':
+                self.eat('|')  # Consume the |
+                temporal_op = self.current_token()
+                if temporal_op in ['near', 'before', 'after', 'within', 'count']:
+                    self.eat()  # Consume the temporal operator
+                    
+                    if temporal_op == 'count':
+                        # Handle count() case
+                        if self.current_token() == '(':
+                            self.eat('(')  # Consume (
+                            if self.current_token() == ')':
+                                self.eat(')')  # Consume )
+                                # Look for comparison
+                                if self.current_token() and '>' in self.current_token():
+                                    count_expr = self.eat()
+                                    # Also consume the number after >
+                                    if self.current_token() and self.current_token().isdigit():
+                                        count_expr += self.eat()
+                                    # Clean up the count expression (remove duplicate >)
+                                    if count_expr.startswith('>') and count_expr.count('>') > 1:
+                                        count_expr = count_expr.replace('>>', '>')
+                                    # Extract just the number for the comparison
+                                    if '>' in count_expr:
+                                        try:
+                                            number = count_expr.split('>')[-1]
+                                            if number.isdigit():
+                                                count_expr = f">{number}"
+                                        except:
+                                            pass
+                                    return TemporalNode(token, 'count', None, None, count_expr)
+                                else:
+                                    return TemporalNode(token, 'count', None, None, "5")
+                            else:
+                                return TemporalNode(token, 'count', None, None, "5")
+                        else:
+                            return TemporalNode(token, 'count', None, None, "5")
+                    else:
+                        # Handle other temporal operators
+                        if self.current_token() in self.available_names:
+                            selection2 = self.eat()
+                            return TemporalNode(token, temporal_op, selection2)
+                        else:
+                            return TemporalNode(token, temporal_op, None)
+            return NameNode(token)
+        
         else:
-            return AndNode(matching)
+            # Unknown token
+            self.eat()
+            return UnsupportedNode(f"Unknown token: {token}")
 
     def safe_wrap(self, node):
-        """
-        Safe wrap nodes, keeping UnsupportedNode if necessary
-        """
-        if isinstance(node, UnsupportedNode):
-            return node
+        """Safely wrap a node if needed"""
         return node
