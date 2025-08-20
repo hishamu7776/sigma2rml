@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "filename": "file_access_win_susp_credential_manager_access.yml",
+    "path": "uploaded_files/file_access_win_susp_credential_manager_access.yml",
+    "title": "Credential Manager Access By Uncommon Applications",
+    "translated": true,
+    "rml_path": "translated_files/file_access_win_susp_credential_manager_access.rml"
+  }
+]
