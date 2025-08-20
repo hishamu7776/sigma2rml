@@ -1,3 +1,0 @@
-logsourceFilter() matches {product: 'windows', category: 'process_creation', service: 'sysmon'};
-no_selection not matches {image: 'C:\\Windows\\System32\\cmd.exe'};
-Main = logsourceFilter >> ((// Translation not supported: Selection  not available (Main \/ empty)));
