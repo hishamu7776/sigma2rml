@@ -40,57 +40,10 @@ class SigmaToRMLTranspiler:
                     for constraint in constraints:
                         lines.append(f"// {constraint}")
             
-            # 3. Safe/No event types (negations) - determine prefix based on condition
-            main_expr = ast['main'].to_rml() if ast['main'] else ""
-            condition_str = self._get_condition_string(ast)
-            
-            # Use 'safe_' prefix for all patterns (consistent naming)
+            # 3. Safe/No event types (negations) - use new negation approach
             for match_node in ast['matches']:
-                safe_name = f"safe_{match_node.name}" if hasattr(match_node, 'name') else "safe_selection"
-                
-                # Handle comparison operators for safe values (inverted logic)
-                has_supported_modifiers = False
-                
-                # Check if this selection is in a NOT condition
-                condition_str = self._get_condition_string(ast)
-                is_not_condition = f"not {match_node.name}" in condition_str.lower()
-                
-                for field, value in match_node.fields.items():
-                    if '|' in str(field):
-                        base_field, operator = field.split('|', 1)
-                        if operator in ['lt', 'lte', 'gt', 'gte']:
-                            has_supported_modifiers = True
-                            
-                            if is_not_condition:
-                                # With NOT: keep the same operator (NOT already inverts the logic)
-                                if operator == 'lt':
-                                    safe_op = '<'
-                                elif operator == 'lte':
-                                    safe_op = '<='
-                                elif operator == 'gt':
-                                    safe_op = '>'
-                                elif operator == 'gte':
-                                    safe_op = '>='
-                                else:
-                                    safe_op = '='
-                            else:
-                                # Without NOT: invert the operator for safe values
-                                if operator == 'lt':
-                                    safe_op = '>='
-                                elif operator == 'lte':
-                                    safe_op = '>'
-                                elif operator == 'gt':
-                                    safe_op = '<='
-                                elif operator == 'gte':
-                                    safe_op = '<'
-                                else:
-                                    safe_op = '='
-                            
-                            lines.append(f"{safe_name} matches {{{base_field.lower()}: x}} with x {safe_op} {value};")
-                
-                # If no supported modifiers, use standard negation
-                if not has_supported_modifiers:
-                    lines.append(f"{safe_name} not matches {match_node.to_rml_content()};")
+                # Use the new negation method that generates "not matches" with opposite conditions
+                lines.append(match_node.get_negation_rml())
             
             lines.append("")
             

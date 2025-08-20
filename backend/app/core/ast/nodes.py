@@ -95,6 +95,9 @@ class MatchNode(ASTNode):
     def to_rml(self) -> str:
         """Convert match to RML format: selection matches {eventid: 4663, accesses: 'DELETE'};"""
         field_pairs = []
+        modifier_constraints = []
+        modifier_counter = 1
+        
         for field, value in self.fields.items():
             if isinstance(value, list):
                 # Handle list values with OR operator
@@ -110,19 +113,44 @@ class MatchNode(ASTNode):
                 if '|' in str(field):
                     base_field, operator = field.split('|', 1)
                     if operator in ['lt', 'lte', 'gt', 'gte']:
-                        # Generate RML with comparison: {field: x} with x <= value
-                        field_pairs.append(f"{base_field.lower()}: x")
+                        # Generate RML with comparison: {field: x1} with x1 <= value
+                        field_pairs.append(f"{base_field.lower()}: x{modifier_counter}")
+                        
+                        # Convert operator to RML syntax
+                        if operator == 'lt':
+                            rml_op = '<'
+                        elif operator == 'lte':
+                            rml_op = '<='
+                        elif operator == 'gt':
+                            rml_op = '>'
+                        elif operator == 'gte':
+                            rml_op = '>='
+                        else:
+                            rml_op = '='
+                        
+                        modifier_constraints.append(f"x{modifier_counter} {rml_op} {value}")
+                        modifier_counter += 1
                     else:
                         # Unsupported modifier - mark as unsupported
                         field_pairs.append(f"// UNSUPPORTED MODIFIER: {field.lower()}: {value} ({operator} not supported)")
                 else:
                     field_pairs.append(f"{field.lower()}: {value}")
         
-        return f"{self.name} matches {{{', '.join(field_pairs)}}};"
+        # Build the RML string
+        rml_content = f"{self.name} matches {{{', '.join(field_pairs)}}}"
+        
+        # Add modifier constraints if any
+        if modifier_constraints:
+            rml_content += f" with {' && '.join(modifier_constraints)}"
+        
+        return rml_content + ";"
     
     def to_rml_content(self) -> str:
         """Return just the content part without the selection name"""
         field_pairs = []
+        modifier_constraints = []
+        modifier_counter = 1
+        
         for field, value in self.fields.items():
             if isinstance(value, list):
                 # Handle list values with OR operator
@@ -134,13 +162,47 @@ class MatchNode(ASTNode):
             elif isinstance(value, str):
                 field_pairs.append(f"{field.lower()}: '{value}'")
             else:
-                field_pairs.append(f"{field.lower()}: {value}")
+                # Check for comparison operators (only support lt, lte, gt, gte)
+                if '|' in str(field):
+                    base_field, operator = field.split('|', 1)
+                    if operator in ['lt', 'lte', 'gt', 'gte']:
+                        # Generate RML with comparison: {field: x1} with x1 <= value
+                        field_pairs.append(f"{base_field.lower()}: x{modifier_counter}")
+                        
+                        # Convert operator to RML syntax
+                        if operator == 'lt':
+                            rml_op = '<'
+                        elif operator == 'lte':
+                            rml_op = '<='
+                        elif operator == 'gt':
+                            rml_op = '>'
+                        elif operator == 'gte':
+                            rml_op = '>='
+                        else:
+                            rml_op = '='
+                        
+                        modifier_constraints.append(f"x{modifier_counter} {rml_op} {value}")
+                        modifier_counter += 1
+                    else:
+                        # Unsupported modifier - mark as unsupported
+                        field_pairs.append(f"// UNSUPPORTED MODIFIER: {field.lower()}: {value} ({operator} not supported)")
+                else:
+                    field_pairs.append(f"{field.lower()}: {value}")
         
-        return f"{{{', '.join(field_pairs)}}}"
+        # Build the content string
+        content = f"{{{', '.join(field_pairs)}}}"
+        
+        # Add modifier constraints if any
+        if modifier_constraints:
+            content += f" with {' && '.join(modifier_constraints)}"
+        
+        return content
     
     def get_comparison_constraints(self) -> list:
         """Get comparison constraints for fields with supported operators (lt, lte, gt, gte)"""
         constraints = []
+        modifier_counter = 1
+        
         for field, value in self.fields.items():
             if '|' in str(field):
                 base_field, operator = field.split('|', 1)
@@ -157,10 +219,65 @@ class MatchNode(ASTNode):
                     else:
                         rml_op = '='
                     
-                    constraints.append(f"{base_field.lower()}: x with x {rml_op} {value}")
+                    constraints.append(f"{base_field.lower()}: x{modifier_counter} with x{modifier_counter} {rml_op} {value}")
+                    modifier_counter += 1
                 # Note: Unsupported modifiers are handled in to_rml() method
         
         return constraints
+    
+    def get_negation_rml(self) -> str:
+        """Generate negation using 'not matches' with opposite conditions"""
+        field_pairs = []
+        modifier_constraints = []
+        modifier_counter = 1
+        
+        for field, value in self.fields.items():
+            if isinstance(value, list):
+                # Handle list values with OR operator
+                if all(isinstance(v, str) for v in value):
+                    quoted_values = [f"'{v}'" for v in value]
+                    field_pairs.append(f"{field.lower()}: {' | '.join(quoted_values)}")
+                else:
+                    field_pairs.append(f"{field.lower()}: {' | '.join(str(v) for v in value)}")
+            elif isinstance(value, str):
+                field_pairs.append(f"{field.lower()}: '{value}'")
+            else:
+                # Check for comparison operators (only support lt, lte, gt, gte)
+                if '|' in str(field):
+                    base_field, operator = field.split('|', 1)
+                    if operator in ['lt', 'lte', 'gt', 'gte']:
+                        # Generate RML with comparison: {field: x1} with x1 [operator] value
+                        field_pairs.append(f"{base_field.lower()}: x{modifier_counter}")
+                        
+                        # Convert operator to RML syntax (keep same operator for not matches)
+                        if operator == 'lt':
+                            rml_op = '<'
+                        elif operator == 'lte':
+                            rml_op = '<='
+                        elif operator == 'gt':
+                            rml_op = '>'
+                        elif operator == 'gte':
+                            rml_op = '>='
+                        else:
+                            rml_op = '='
+                        
+                        modifier_constraints.append(f"x{modifier_counter} {rml_op} {value}")
+                        modifier_counter += 1
+                    else:
+                        # Unsupported modifier - mark as unsupported
+                        field_pairs.append(f"// UNSUPPORTED MODIFIER: {field.lower()}: {value} ({operator} not supported)")
+                else:
+                    field_pairs.append(f"{field.lower()}: {value}")
+        
+        # Build the negation RML string
+        safe_name = f"safe_{self.name}" if hasattr(self, 'name') else "safe_selection"
+        rml_content = f"{safe_name} not matches {{{', '.join(field_pairs)}}}"
+        
+        # Add modifier constraints if any
+        if modifier_constraints:
+            rml_content += f" with {' && '.join(modifier_constraints)}"
+        
+        return rml_content + ";"
 
 class AndNode(ASTNode):
     """Represents logical AND operation"""

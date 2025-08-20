@@ -1,0 +1,10 @@
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4738
+    AttributeLDAPDisplayName: 'Min-Pwd-Length'
+    AttributeValue|gte: 7
+    AttributeNumber|gt: 10
+  condition: selection
