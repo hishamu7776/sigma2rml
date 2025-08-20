@@ -1,15 +1,19 @@
 import re
 from .nodes import AndNode, OrNode, NotNode, NameNode, UnsupportedNode, TemporalNode, QuantifierNode
+from .temporal_monitor import EnhancedTemporalNode
 
 class ConditionParser:
-    def __init__(self, available_names):
+    def __init__(self, available_names, detection: dict = None):
         """
         available_names: list of selection names
+        detection: detection section from Sigma rule for field values
         """
         self.available_names = available_names
+        self.detection = detection or {}
         self.tokens = []
         self.pos = 0
         self.temporal_operators = ['near', 'before', 'after', 'within']
+        self.timeframe_pattern = re.compile(r'(\d+[smhd])', re.IGNORECASE)
 
     def parse(self, condition_str):
         """Main parsing entry point - start with condition to understand structure"""
@@ -18,7 +22,96 @@ class ConditionParser:
         
         self.tokens = self.tokenize(condition_str)
         self.pos = 0
+        
+        # Check if this is a temporal condition with timeframe
+        if self._has_timeframe(condition_str):
+            return self._parse_temporal_condition()
+        else:
+            return self.expression()
+
+    def _has_timeframe(self, condition_str: str) -> bool:
+        """Check if condition contains a timeframe specification"""
+        # Check for timeframe patterns in the condition string
+        if self.timeframe_pattern.search(condition_str):
+            return True
+        
+        # Also check if the condition string contains "timeframe" keyword
+        if "timeframe" in condition_str.lower():
+            return True
+        
+        # Check for near operator which indicates temporal behavior
+        if "| near" in condition_str.lower():
+            return True
+        
+        return False
+
+    def _parse_temporal_condition(self):
+        """Parse temporal condition with timeframe"""
+        # First check if this is a near operator condition
+        if self._has_near_operator():
+            return self._parse_near_condition()
+        
+        # Parse the regular condition part
+        condition_node = self.expression()
+        
+        # Look for timeframe in the tokens or condition string
+        timeframe = self._extract_timeframe()
+        
+        # Create enhanced temporal node with detection information
+        return EnhancedTemporalNode(condition_node, timeframe, self.detection)
+
+    def _has_near_operator(self) -> bool:
+        """Check if tokens contain a near operator pattern"""
+        for i, token in enumerate(self.tokens):
+            if token == '|' and i + 1 < len(self.tokens) and self.tokens[i + 1].lower() == 'near':
+                return True
+        return False
+
+    def _parse_near_condition(self):
+        """Parse near operator condition and convert to AND operation"""
+        # Find the near operator position
+        near_pos = -1
+        for i, token in enumerate(self.tokens):
+            if token == '|' and i + 1 < len(self.tokens) and self.tokens[i + 1].lower() == 'near':
+                near_pos = i
+                break
+        
+        if near_pos == -1:
+            # Fallback to regular parsing
+            return self.expression()
+        
+        # Extract the two selections around the near operator
+        if near_pos > 0 and near_pos + 2 < len(self.tokens):
+            selection1 = self.tokens[near_pos - 1]
+            selection2 = self.tokens[near_pos + 2]  # Skip | and near
+            
+            # Create an AND node with the two selections
+            left_node = NameNode(selection1)
+            right_node = NameNode(selection2)
+            and_node = AndNode(left_node, right_node)
+            
+            # Extract timeframe
+            timeframe = self._extract_timeframe()
+            
+            # Create enhanced temporal node
+            return EnhancedTemporalNode(and_node, timeframe, self.detection)
+        
+        # Fallback to regular parsing
         return self.expression()
+
+    def _extract_timeframe(self) -> str:
+        """Extract timeframe from tokens or detection section"""
+        # First check tokens for timeframe patterns
+        for token in self.tokens:
+            if self.timeframe_pattern.match(token):
+                return token
+        
+        # If no timeframe found in tokens, check if we have a timeframe field in detection
+        if self.detection and 'timeframe' in self.detection:
+            return self.detection['timeframe']
+        
+        # Default timeframe if none found
+        return "5m"
 
     def tokenize(self, text):
         """
@@ -47,6 +140,7 @@ class ConditionParser:
             r'near', r'before', r'after', r'within', r'count',
             r'>\d+',  # comparison operators with numbers (must come before [<>]=?)
             r'[<>]=?',  # comparison operators
+            r'\d+[smhd]',  # timeframe patterns (5m, 10s, 2h, 1d)
             r'\w+',  # identifiers
             r'[^\s]+'  # catch any remaining tokens
         ]
@@ -198,12 +292,12 @@ class ConditionParser:
                                     # Extract just the number for the comparison
                                     if '>' in count_expr:
                                         try:
-                                            number = count_expr.split('>')[-1]
-                                            if number.isdigit():
-                                                count_expr = f">{number}"
-                                        except:
-                                            pass
-                                    return TemporalNode(token, 'count', None, None, count_expr)
+                                            count_num = int(count_expr.split('>')[1])
+                                            return TemporalNode(token, 'count', None, None, count_num)
+                                        except (ValueError, IndexError):
+                                            return TemporalNode(token, 'count', None, None, count_expr)
+                                    else:
+                                        return TemporalNode(token, 'count', None, None, count_expr)
                                 else:
                                     return TemporalNode(token, 'count', None, None, "5")
                             else:
@@ -212,17 +306,20 @@ class ConditionParser:
                             return TemporalNode(token, 'count', None, None, "5")
                     else:
                         # Handle other temporal operators
-                        if self.current_token() in self.available_names:
+                        selection2 = None
+                        if self.current_token() and self.current_token() in self.available_names:
                             selection2 = self.eat()
-                            return TemporalNode(token, temporal_op, selection2)
-                        else:
-                            return TemporalNode(token, temporal_op, None)
+                        return TemporalNode(token, temporal_op, selection2)
+                else:
+                    # Unknown temporal operator, treat as regular identifier
+                    pass
+            
             return NameNode(token)
         
         else:
-            # Unknown token
+            # Unknown token, treat as identifier
             self.eat()
-            return UnsupportedNode(f"Unknown token: {token}")
+            return NameNode(token)
 
     def safe_wrap(self, node):
         """Safely wrap a node if needed"""
