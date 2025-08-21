@@ -39,9 +39,12 @@ class SigmaToRMLTranspiler:
             detection = sigma_dict.get('detection', {})
             condition = detection.get('condition', 'selection') if detection else 'selection'
             
-            # Check if this is a temporal condition by looking for timeframe
-            timeframe = detection.get('timeframe', None)
-            is_temporal = timeframe is not None
+            # Store the original condition string for later use
+            self.original_condition = condition
+            
+            # Check if this is a temporal condition by looking for temporal operators in the condition
+            # NOT just by the presence of timeframe field
+            is_temporal = self._has_temporal_operators(condition)
             
             # Parse condition
             available_names = list(detection.keys()) if detection else []
@@ -49,9 +52,10 @@ class SigmaToRMLTranspiler:
             
             parser = ConditionParser(available_names, detection)
             
-            # If we have a timeframe, modify the condition to include it
+            # Only use temporal parsing if the condition actually contains temporal operators
             if is_temporal:
                 # Add timeframe to the condition string so the parser can detect it
+                timeframe = detection.get('timeframe', '5m')
                 condition_with_timeframe = f"{condition} timeframe:{timeframe}"
                 ast = parser.parse(condition_with_timeframe)
             else:
@@ -63,12 +67,18 @@ class SigmaToRMLTranspiler:
             # Add logsource filter
             if logsource:
                 rml_parts.append(self._generate_logsource_filter(logsource))
+            else:
+                # Provide default logsource if none specified
+                rml_parts.append("// log source filter")
+                rml_parts.append("logsource matches {product: 'windows', service: 'security'};")
             
             # Add selection definitions
+            rml_parts.append("// event types")
             rml_parts.append(self._generate_selection_definitions(detection))
             
             # Add main expression
             if ast:
+                rml_parts.append("// property section")
                 rml_parts.append(self._generate_main_expression(ast, detection))
             
             # Add monitor expression
@@ -114,76 +124,82 @@ class SigmaToRMLTranspiler:
         """
         Generate the Monitor expression for non-temporal rules
         """
-        if not ast or not hasattr(ast, 'matches'):
+        if not ast:
             return "Monitor = empty;"
         
-        # Check if the main expression contains quantifiers
-        main_expr = ast['main'].to_rml() if ast['main'] else ""
+        # For temporal conditions, this should not be called
+        if isinstance(ast, EnhancedTemporalNode):
+            return "// Monitor handled by temporal monitor"
         
-        # Check the quantifier type by examining the original condition and AST node
+        # Get the condition string to determine the logical structure
         condition_str = self._get_condition_string(ast)
         
-        if "1 of" in condition_str.lower() or (hasattr(ast['main'], 'quantifier') and "1 of" in ast['main'].quantifier):
-            # For "1 of" patterns, use safe_ prefix and AND in Monitor
-            safe_selections = []
-            for match_node in ast['matches']:
-                safe_name = f"safe_{match_node.name}" if hasattr(match_node, 'name') else "safe_selection"
-                safe_selections.append(safe_name)
-            
+        # Extract selection names from the AST
+        selections = self._extract_selections_from_ast(ast)
+        
+        if not selections:
+            return "Monitor = empty;"
+        
+        # Generate safe selection names
+        safe_selections = [f"safe_{selection}" for selection in selections]
+        
+        # Determine the logical structure based on the condition
+        if "1 of" in condition_str.lower():
+            # For "1 of" patterns, use AND in Monitor (negative logic)
             if len(safe_selections) == 1:
                 return f"Monitor = {safe_selections[0]}*;"
             else:
                 return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
-        elif "all of" in condition_str.lower() or (hasattr(ast['main'], 'quantifier') and "all of" in ast['main'].quantifier):
-            # For "all of" patterns, use safe_ prefix and OR in Monitor
-            safe_selections = []
-            for match_node in ast['matches']:
-                safe_name = f"safe_{match_node.name}" if hasattr(match_node, 'name') else "safe_selection"
-                safe_selections.append(safe_name)
-            
+        elif "all of" in condition_str.lower():
+            # For "all of" patterns, use OR in Monitor (negative logic)
             if len(safe_selections) == 1:
                 return f"Monitor = {safe_selections[0]}*;"
             else:
                 return f"Monitor = ({' \\/ '.join(safe_selections)})*;"
-        else:
-            # For regular conditions, check the actual logical structure
-            # Get the condition string from the original input to determine AND vs OR
-            condition_str = self._get_condition_string(ast)
-            
-            if " and " in condition_str.lower():
-                # Sigma AND condition: use OR in RML Monitor (negative logic)
-                safe_selections = []
-                for match_node in ast['matches']:
-                    safe_name = f"safe_{match_node.name}" if hasattr(match_node, 'name') else "safe_selection"
-                    safe_selections.append(safe_name)
-                
-                if len(safe_selections) == 1:
-                    return f"Monitor = {safe_selections[0]}*;"
-                else:
-                    return f"Monitor = ({' \\/ '.join(safe_selections)})*;"
-            elif " or " in condition_str.lower():
-                # Sigma OR condition: use AND in RML Monitor (negative logic)
-                safe_selections = []
-                for match_node in ast['matches']:
-                    safe_name = f"safe_{match_node.name}" if hasattr(match_node, 'name') else "safe_selection"
-                    safe_selections.append(safe_name)
-                
-                if len(safe_selections) == 1:
-                    return f"Monitor = {safe_selections[0]}*;"
-                else:
-                    return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
+        elif "any of" in condition_str.lower():
+            # For "any of" patterns, use AND in Monitor (negative logic)
+            if len(safe_selections) == 1:
+                return f"Monitor = {safe_selections[0]}*;"
             else:
-                # Single selection: use single safe selection
-                safe_selections = []
-                for match_node in ast['matches']:
-                    safe_name = f"safe_{match_node.name}" if hasattr(match_node, 'name') else "safe_selection"
-                    safe_selections.append(safe_name)
-                
-                if len(safe_selections) == 1:
-                    return f"Monitor = {safe_selections[0]}*;"
-                else:
-                    # Default to OR for multiple selections without explicit operators
-                    return f"Monitor = ({' \\/ '.join(safe_selections)})*;"
+                return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
+        elif " and " in condition_str.lower():
+            # Sigma AND condition: use OR in RML Monitor (negative logic)
+            if len(safe_selections) == 1:
+                return f"Monitor = {safe_selections[0]}*;"
+            else:
+                return f"Monitor = ({' \\/ '.join(safe_selections)})*;"
+        elif " or " in condition_str.lower():
+            # Sigma OR condition: use AND in RML Monitor (negative logic)
+            if len(safe_selections) == 1:
+                return f"Monitor = {safe_selections[0]}*;"
+            else:
+                return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
+        else:
+            # Single selection or default case
+            if len(safe_selections) == 1:
+                return f"Monitor = {safe_selections[0]}*;"
+            else:
+                # Default to OR for multiple selections without explicit operators
+                return f"Monitor = ({' \\/ '.join(safe_selections)})*;"
+    
+    def _extract_selections_from_ast(self, ast):
+        """Extract selection names from the AST"""
+        selections = set()
+        
+        if isinstance(ast, NameNode):
+            selections.add(ast.name)
+        elif isinstance(ast, AndNode):
+            selections.update(self._extract_selections_from_ast(ast.left))
+            selections.update(self._extract_selections_from_ast(ast.right))
+        elif isinstance(ast, OrNode):
+            selections.update(self._extract_selections_from_ast(ast.left))
+            selections.update(self._extract_selections_from_ast(ast.right))
+        elif isinstance(ast, NotNode):
+            selections.update(self._extract_selections_from_ast(ast.operand))
+        elif isinstance(ast, QuantifierNode):
+            selections.update(ast.selections)
+        
+        return list(selections)
 
     def _generate_temporal_monitor(self, ast):
         """
@@ -322,10 +338,21 @@ class SigmaToRMLTranspiler:
                         field_pairs.append(f"{field.lower()}: {field_value}")
                 
                 if field_pairs:
-                    rml_lines.append(f"{key}(ts) matches {{{', '.join(field_pairs)}}};")
+                    rml_lines.append(f"{key} matches {{{', '.join(field_pairs)}}};")
+                else:
+                    rml_lines.append(f"{key} matches {{}};")
             else:
                 # Handle simple selections
-                rml_lines.append(f"{key}(ts) matches {{}};")
+                rml_lines.append(f"{key} matches {{}};")
+        
+        # Add negation definitions for safe selections
+        for key in detection.keys():
+            if key not in ['condition', 'timeframe']:
+                rml_lines.append(f"safe_{key} not matches {key};")
+        
+        # Add comment for negation section
+        if rml_lines:
+            rml_lines.insert(0, "// negation")
         
         return "\n".join(rml_lines)
     
@@ -342,12 +369,53 @@ class SigmaToRMLTranspiler:
         if hasattr(ast, 'to_rml'):
             return ast.to_rml()
         
+        # Handle basic AST nodes that don't have to_rml method
+        if isinstance(ast, NameNode):
+            # Single selection
+            return f"// Main expression: {ast.name}"
+        elif isinstance(ast, AndNode):
+            # AND condition
+            left = self._get_node_representation(ast.left)
+            right = self._get_node_representation(ast.right)
+            return f"// Main expression: {left} and {right}"
+        elif isinstance(ast, OrNode):
+            # OR condition
+            left = self._get_node_representation(ast.left)
+            right = self._get_node_representation(ast.right)
+            return f"// Main expression: {left} or {right}"
+        elif isinstance(ast, NotNode):
+            # NOT condition
+            operand = self._get_node_representation(ast.operand)
+            return f"// Main expression: not {operand}"
+        elif isinstance(ast, QuantifierNode):
+            # Quantifier condition
+            return f"// Main expression: {ast.quantifier} of {', '.join(ast.selections)}"
+        
         return "// Main expression not available"
+    
+    def _get_node_representation(self, node) -> str:
+        """Get a string representation of a node"""
+        if isinstance(node, NameNode):
+            return node.name
+        elif isinstance(node, AndNode):
+            left = self._get_node_representation(node.left)
+            right = self._get_node_representation(node.right)
+            return f"({left} and {right})"
+        elif isinstance(node, OrNode):
+            left = self._get_node_representation(node.left)
+            right = self._get_node_representation(node.right)
+            return f"({left} or {right})"
+        elif isinstance(node, NotNode):
+            operand = self._get_node_representation(node.operand)
+            return f"not {operand}"
+        elif isinstance(node, QuantifierNode):
+            return f"{node.quantifier} of {', '.join(node.selections)}"
+        else:
+            return str(node)
     
     def _get_condition_string(self, ast) -> str:
         """Get the original condition string for analysis"""
-        # This is a placeholder - in a real implementation, you'd need to track the original condition
-        return "selection"  # Default fallback
+        return getattr(self, 'original_condition', 'selection')
     
     def _convert_timeframe_to_ms(self, timeframe: str) -> str:
         """
@@ -392,3 +460,33 @@ class SigmaToRMLTranspiler:
         """
         # This method can be extended for more complex condition handling
         return condition
+
+    def _has_temporal_operators(self, condition: str) -> bool:
+        """
+        Check if the condition string contains actual temporal operators
+        """
+        if not condition:
+            return False
+        
+        # Check for temporal operators
+        temporal_operators = ['| near', '| before', '| after', '| within']
+        for op in temporal_operators:
+            if op in condition.lower():
+                return True
+        
+        # Check for quantifiers that indicate temporal behavior
+        quantifier_patterns = [
+            r'\bany of\b',
+            r'\ball of\b',
+            r'\b1 of\b',
+            r'\b2 of\b',
+            r'\b3 of\b',
+            r'\b4 of\b',
+            r'\b5 of\b'
+        ]
+        
+        for pattern in quantifier_patterns:
+            if re.search(pattern, condition.lower()):
+                return True
+        
+        return False

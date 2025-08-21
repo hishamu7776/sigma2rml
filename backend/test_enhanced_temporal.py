@@ -35,7 +35,7 @@ detection:
 """
         
         result_1 = transpiler.transpile(sigma_rule_1)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_1)
         
@@ -57,7 +57,7 @@ detection:
 """
         
         result_2 = transpiler.transpile(sigma_rule_2)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_2)
         
@@ -79,7 +79,7 @@ detection:
 """
         
         result_3 = transpiler.transpile(sigma_rule_3)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_3)
         
@@ -98,15 +98,42 @@ detection:
 """
         
         result_4 = transpiler.transpile(sigma_rule_4)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_4)
         
-        print("\n🎯 Enhanced Temporal Monitor Test Completed!")
-        print("✅ All test cases transpiled successfully")
+        print("\nRESULT: Enhanced Temporal Monitor Test Completed!")
+        print("PASS: All test cases transpiled successfully")
+        
+        # Verify the enhanced temporal monitor system
+        print("\nVERIFY: Enhanced Temporal Monitor:")
+        
+        # Check if temporal monitor is generated
+        if "Monitor<start_ts, s1, s2>" in result_1:
+            print("PASS: Temporal Monitor: Correctly generated with state variables")
+        else:
+            print("FAIL: Temporal Monitor: Not generated correctly")
+        
+        # Check if timeframe is converted to milliseconds
+        if "300000" in result_1:
+            print("PASS: Timeframe: Correctly converted to milliseconds")
+        else:
+            print("FAIL: Timeframe: Not converted correctly")
+        
+        # Check if selections are properly defined
+        if "safe_selection_task" in result_1 and "safe_selection_firewall" in result_1:
+            print("PASS: Selections: Properly defined with safe_ prefix")
+        else:
+            print("FAIL: Selections: Not properly defined")
+        
+        # Check if logsource filter is generated
+        if "logsource matches" in result_1:
+            print("PASS: Logsource: Filter correctly generated")
+        else:
+            print("FAIL: Logsource: Filter not generated")
         
     except Exception as e:
-        print(f"❌ Test failed with error: {e}")
+        print(f"FAIL: Test failed with error: {e}")
         import traceback
         traceback.print_exc()
 
@@ -126,12 +153,12 @@ def test_timeframe_parsing():
         
         for timeframe in test_timeframes:
             ms = generator.parse_timeframe(timeframe)
-            print(f"✅ {timeframe} -> {ms}ms")
+            print(f"PASS: {timeframe} -> {ms}ms")
         
-        print("🎯 Timeframe parsing test completed!")
+        print("RESULT: Timeframe parsing test completed!")
         
     except Exception as e:
-        print(f"❌ Timeframe parsing test failed: {e}")
+        print(f"FAIL: Timeframe parsing test failed: {e}")
 
 def test_selection_extraction():
     """Test selection extraction from complex conditions"""
@@ -153,15 +180,15 @@ def test_selection_extraction():
         
         selections = generator.extract_selections_from_condition(and_node)
         
-        print("✅ Extracted selections:")
+        print("PASS: Extracted selections:")
         for name, is_negated in selections:
             status = "NOT" if is_negated else "POSITIVE"
             print(f"   {name}: {status}")
         
-        print("🎯 Selection extraction test completed!")
+        print("RESULT: Selection extraction test completed!")
         
     except Exception as e:
-        print(f"❌ Selection extraction test failed: {e}")
+        print(f"FAIL: Selection extraction test failed: {e}")
 
 if __name__ == "__main__":
     test_enhanced_temporal_monitor()

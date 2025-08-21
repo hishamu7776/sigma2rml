@@ -33,10 +33,10 @@ def test_path_resolution():
             print(f"OS: {os.name}")
             print("---")
         
-        print("✅ Path resolution test completed")
+        print("PASS Path resolution test completed")
         
     except Exception as e:
-        print(f"❌ Path resolution test failed: {e}")
+        print(f"FAIL Path resolution test failed: {e}")
 
 def test_file_registry():
     """Test current file registry"""
@@ -59,15 +59,15 @@ def test_file_registry():
             
             # Check if file exists
             if os.path.exists(actual_path):
-                print("✅ File exists")
+                print("PASS File exists")
             else:
-                print("❌ File not found")
+                print("FAIL File not found")
             print("---")
         
-        print("✅ File registry test completed")
+        print("PASS File registry test completed")
         
     except Exception as e:
-        print(f"❌ File registry test failed: {e}")
+        print(f"FAIL File registry test failed: {e}")
 
 if __name__ == "__main__":
     test_path_resolution()

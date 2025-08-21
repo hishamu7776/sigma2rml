@@ -23,7 +23,7 @@ def test_improved_storage_functions():
         
         # Test load_db
         db = load_db()
-        print(f"✅ load_db: {len(db)} records loaded")
+        print(f"PASS: load_db: {len(db)} records loaded")
         
         # Test add_file_record with validation
         test_filename = "test_rule_improved.yml"
@@ -31,34 +31,34 @@ def test_improved_storage_functions():
         test_title = "Test Improved Rule"
         
         add_file_record(test_filename, test_path, test_title)
-        print(f"✅ add_file_record: Added {test_filename}")
+        print(f"PASS: add_file_record: Added {test_filename}")
         
         # Test get_file_record
         record = get_file_record(test_filename)
         if record:
-            print(f"✅ get_file_record: Found {record['filename']} with title '{record['title']}'")
+            print(f"PASS get_file_record: Found {record['filename']} with title '{record['title']}'")
         else:
-            print("❌ get_file_record: Failed to retrieve record")
+            print("FAIL get_file_record: Failed to retrieve record")
         
         # Test update_translation_status
         rml_path = "/test/path/test_rule_improved.rml"
         update_translation_status(test_filename, rml_path)
         updated_record = get_file_record(test_filename)
         if updated_record and updated_record.get("translated"):
-            print(f"✅ update_translation_status: Updated {test_filename} to translated")
+            print(f"PASS update_translation_status: Updated {test_filename} to translated")
         else:
-            print("❌ update_translation_status: Failed to update record")
+            print("FAIL update_translation_status: Failed to update record")
         
         # Test delete_file_record
         delete_file_record(test_filename)
         deleted_record = get_file_record(test_filename)
         if not deleted_record:
-            print(f"✅ delete_file_record: Successfully deleted {test_filename}")
+            print(f"PASS delete_file_record: Successfully deleted {test_filename}")
         else:
-            print("❌ delete_file_record: Failed to delete record")
+            print("FAIL delete_file_record: Failed to delete record")
             
     except Exception as e:
-        print(f"❌ Improved storage functions test failed: {e}")
+        print(f"FAIL Improved storage functions test failed: {e}")
 
 def test_improved_transpiler():
     """Test the improved core transpiler"""
@@ -80,9 +80,9 @@ def test_improved_transpiler():
         
         result = transpiler.transpile(sigma_rule)
         if result and "logsource matches" in result:
-            print("✅ Core transpiler: Basic rule transpilation successful")
+            print("PASS Core transpiler: Basic rule transpilation successful")
         else:
-            print("❌ Core transpiler: Basic rule transpilation failed")
+            print("FAIL Core transpiler: Basic rule transpilation failed")
             
         # Test with numerical modifiers (the fix we implemented)
         sigma_with_modifiers = {
@@ -97,12 +97,12 @@ def test_improved_transpiler():
         
         result_with_modifiers = transpiler.transpile(sigma_with_modifiers)
         if result_with_modifiers and "x1 >= 7" in result_with_modifiers:
-            print("✅ Core transpiler: Numerical modifiers with NOT condition working correctly")
+            print("PASS Core transpiler: Numerical modifiers with NOT condition working correctly")
         else:
-            print("❌ Core transpiler: Numerical modifiers with NOT condition failed")
+            print("FAIL Core transpiler: Numerical modifiers with NOT condition failed")
             
     except Exception as e:
-        print(f"❌ Improved core transpiler test failed: {e}")
+        print(f"FAIL Improved core transpiler test failed: {e}")
 
 def test_improved_file_operations():
     """Test improved file operations"""
@@ -138,15 +138,15 @@ detection:
         with open(test_file_path, 'w', encoding='utf-8') as f:
             f.write(test_sigma_content)
         
-        print(f"✅ Created improved test file: {test_file_path}")
+        print(f"PASS Created improved test file: {test_file_path}")
         
         # Test file reading
         with open(test_file_path, 'r', encoding='utf-8') as f:
             content = f.read()
             if "Test Improved Sigma Rule" in content:
-                print("✅ File reading: Successfully read improved test file")
+                print("PASS File reading: Successfully read improved test file")
             else:
-                print("❌ File reading: Failed to read improved test file content")
+                print("FAIL File reading: Failed to read improved test file content")
         
         # Test YAML parsing with metadata
         import yaml
@@ -156,26 +156,26 @@ detection:
                 parsed_content.get("description") == "A test rule for API testing" and
                 parsed_content.get("author") == "Test User" and
                 "test" in parsed_content.get("tags", [])):
-                print("✅ YAML parsing: Successfully parsed improved test file with metadata")
+                print("PASS YAML parsing: Successfully parsed improved test file with metadata")
             else:
-                print("❌ YAML parsing: Failed to parse improved test file correctly")
+                print("FAIL YAML parsing: Failed to parse improved test file correctly")
         except Exception as e:
-            print(f"❌ YAML parsing: Failed to parse YAML: {e}")
+            print(f"FAIL YAML parsing: Failed to parse YAML: {e}")
         
         # Test file size and content validation
         file_size = len(content)
         if file_size > 0 and file_size < 10000:  # Reasonable size
-            print(f"✅ File validation: File size {file_size} bytes is valid")
+            print(f"PASS File validation: File size {file_size} bytes is valid")
         else:
-            print(f"❌ File validation: File size {file_size} bytes is invalid")
+            print(f"FAIL File validation: File size {file_size} bytes is invalid")
         
         # Cleanup
         shutil.rmtree(test_upload_dir)
         shutil.rmtree(test_translated_dir)
-        print("✅ Cleanup: Removed improved test directories")
+        print("PASS Cleanup: Removed improved test directories")
         
     except Exception as e:
-        print(f"❌ Improved file operations test failed: {e}")
+        print(f"FAIL Improved file operations test failed: {e}")
 
 def test_improved_api_endpoints():
     """Test improved API endpoint functionality"""
@@ -187,7 +187,7 @@ def test_improved_api_endpoints():
         from app.api.files import list_files, view_file, view_rml, delete_file, get_file_info
         from app.api.upload import upload_file, get_allowed_file_types
         
-        print("✅ API imports: Successfully imported all improved API modules")
+        print("PASS API imports: Successfully imported all improved API modules")
         
         # Test transpile endpoint logic
         test_sigma = """
@@ -207,18 +207,18 @@ detection:
             
             result = transpiler.transpile(test_sigma)
             if result:
-                print("✅ Transpile logic: Successfully transpiled test Sigma rule")
+                print("PASS Transpile logic: Successfully transpiled test Sigma rule")
             else:
-                print("❌ Transpile logic: Failed to transpile test Sigma rule")
+                print("FAIL Transpile logic: Failed to transpile test Sigma rule")
                 
             # Test that the numerical modifier fix is working
             if "x1 >= 7" in result:
-                print("✅ Transpile logic: Numerical modifier fix working correctly")
+                print("PASS Transpile logic: Numerical modifier fix working correctly")
             else:
-                print("❌ Transpile logic: Numerical modifier fix not working")
+                print("FAIL Transpile logic: Numerical modifier fix not working")
                 
         except Exception as e:
-            print(f"❌ Transpile logic: Error during transpilation: {e}")
+            print(f"FAIL Transpile logic: Error during transpilation: {e}")
         
         # Test file info functions
         try:
@@ -227,15 +227,15 @@ detection:
             # Test with a non-existent file
             file_info = get_file_info("/non/existent/path")
             if file_info is None:
-                print("✅ File info: Correctly handles non-existent files")
+                print("PASS File info: Correctly handles non-existent files")
             else:
-                print("❌ File info: Incorrectly returned info for non-existent file")
+                print("FAIL File info: Incorrectly returned info for non-existent file")
                 
         except Exception as e:
-            print(f"❌ File info test failed: {e}")
+            print(f"FAIL File info test failed: {e}")
         
     except Exception as e:
-        print(f"❌ Improved API endpoints test failed: {e}")
+        print(f"FAIL Improved API endpoints test failed: {e}")
 
 def test_error_handling():
     """Test error handling in APIs"""
@@ -247,19 +247,19 @@ def test_error_handling():
         # Test with invalid filename
         try:
             record = get_file_record("")
-            print("❌ Error handling: Should have failed with empty filename")
+            print("FAIL Error handling: Should have failed with empty filename")
         except Exception as e:
-            print(f"✅ Error handling: Correctly handled empty filename: {type(e).__name__}")
+            print(f"PASS Error handling: Correctly handled empty filename: {type(e).__name__}")
         
         # Test with non-existent file
         record = get_file_record("non_existent_file.yml")
         if record is None:
-            print("✅ Error handling: Correctly handled non-existent file")
+            print("PASS Error handling: Correctly handled non-existent file")
         else:
-            print("❌ Error handling: Incorrectly returned record for non-existent file")
+            print("FAIL Error handling: Incorrectly returned record for non-existent file")
             
     except Exception as e:
-        print(f"❌ Error handling test failed: {e}")
+        print(f"FAIL Error handling test failed: {e}")
 
 def test_file_validation():
     """Test file validation logic"""
@@ -278,27 +278,27 @@ def test_file_validation():
         for filename in invalid_filenames:
             try:
                 if not filename or not filename.strip():
-                    print(f"✅ File validation: Empty filename correctly rejected")
+                    print(f"PASS File validation: Empty filename correctly rejected")
                 elif '..' in filename or '/' in filename or '\\' in filename:
-                    print(f"✅ File validation: Path traversal in '{filename}' correctly rejected")
+                    print(f"PASS File validation: Path traversal in '{filename}' correctly rejected")
                 else:
-                    print(f"❌ File validation: Unexpected validation result for '{filename}'")
+                    print(f"FAIL File validation: Unexpected validation result for '{filename}'")
             except Exception as e:
-                print(f"✅ File validation: '{filename}' correctly caused error: {type(e).__name__}")
+                print(f"PASS File validation: '{filename}' correctly caused error: {type(e).__name__}")
         
         # Test file size validation
         max_size = 10 * 1024 * 1024  # 10MB
         if max_size > 0 and max_size < 100 * 1024 * 1024:  # Reasonable range
-            print("✅ File validation: File size limit is reasonable")
+            print("PASS File validation: File size limit is reasonable")
         else:
-            print("❌ File validation: File size limit is unreasonable")
+            print("FAIL File validation: File size limit is unreasonable")
             
     except Exception as e:
-        print(f"❌ File validation test failed: {e}")
+        print(f"FAIL File validation test failed: {e}")
 
 def main():
     """Run all improved API tests"""
-    print("🧪 Testing Improved Sigma to RML File APIs")
+    print("Testing Improved Sigma to RML File APIs")
     print("=" * 70)
     
     try:
@@ -310,14 +310,14 @@ def main():
         test_file_validation()
         
         print("\n" + "=" * 70)
-        print("🎯 Improved API Testing Complete!")
-        print("✅ All improved functionality tested")
-        print("✅ Error handling verified")
-        print("✅ File validation tested")
-        print("✅ Numerical modifier fix confirmed working")
+        print("RESULT: Improved API Testing Complete!")
+        print("PASS: All improved functionality tested")
+        print("PASS: Error handling verified")
+        print("PASS: File validation tested")
+        print("PASS: Numerical modifier fix confirmed working")
         
     except Exception as e:
-        print(f"\n❌ Improved API testing failed with error: {e}")
+        print(f"\nFAIL Improved API testing failed with error: {e}")
         import traceback
         traceback.print_exc()
 

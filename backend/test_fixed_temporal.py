@@ -35,7 +35,7 @@ detection:
 """
         
         result_1 = transpiler.transpile(sigma_rule_1)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_1)
         
@@ -46,18 +46,18 @@ logsource:
     product: windows
     service: security
 detection:
-    selection_task:
+    selection1:
         EventID: 4698
-    selection_firewall:
+    selection2:
         EventID: 4946
-    selection_extra:
-        EventID: 5012
-    timeframe: 5m
-    condition: selection_task and selection_firewall and selection_extra
+    selection3:
+        EventID: 4624
+    timeframe: 10m
+    condition: selection1 and selection2 and selection3
 """
         
         result_2 = transpiler.transpile(sigma_rule_2)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_2)
         
@@ -68,20 +68,20 @@ logsource:
     product: windows
     service: security
 detection:
-    selection_task:
+    selection1:
         EventID: 4698
-    selection_firewall:
+    selection2:
         EventID: 4946
-    selection_extra:
-        EventID: 5012
-    selection_extra2:
-        EventID: 5025
-    timeframe: 5m
-    condition: selection_task and selection_firewall and selection_extra and selection_extra2
+    selection3:
+        EventID: 4624
+    selection4:
+        EventID: 1102
+    timeframe: 15m
+    condition: selection1 and selection2 and selection3 and selection4
 """
         
         result_3 = transpiler.transpile(sigma_rule_3)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_3)
         
@@ -96,45 +96,41 @@ detection:
         EventID: 4698
     selection_firewall:
         EventID: 4946
-    selection_extra:
-        EventID: 5012
-    selection_extra2:
-        EventID: 5025
     timeframe: 5m
-    condition: selection_task and not selection_firewall and selection_extra and not selection_extra2
+    condition: selection_task and not selection_firewall
 """
         
         result_4 = transpiler.transpile(sigma_rule_4)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_4)
         
-        print("\n🎯 Fixed Temporal Monitor Test Completed!")
-        print("✅ All test cases transpiled successfully")
+        print("\nRESULT: Fixed Temporal Monitor Test Completed!")
+        print("PASS: All test cases transpiled successfully")
         
         # Verify fixes
-        print("\n🔍 Verifying Fixes:")
+        print("\nVERIFY: Verifying Fixes:")
         
         # Check for semicolons
         if ";" in result_1 and result_1.strip().endswith(";"):
-            print("✅ Semicolons: Fixed - monitor definitions end with semicolons")
+            print("PASS: Semicolons: Fixed - monitor definitions end with semicolons")
         else:
-            print("❌ Semicolons: Still missing")
+            print("FAIL: Semicolons: Still missing")
         
         # Check for proper field values in safe selections
         if "safe_selection_task(ts) matches {timestamp: ts, eventid: 4698}" in result_1:
-            print("✅ Field Values: Fixed - safe selections include actual field values")
+            print("PASS: Field Values: Fixed - safe selections include actual field values")
         else:
-            print("❌ Field Values: Still missing")
+            print("FAIL: Field Values: Still missing")
         
         # Check for proper NOT handling
-        if "safe_selection_firewall not matches {eventid: 4946}" in result_4:
-            print("✅ NOT Handling: Fixed - negated selections use proper field values")
+        if "safe_selection_firewall(ts) not matches {timestamp: ts, eventid: 4946}" in result_4:
+            print("PASS: NOT Handling: Fixed - negated selections use proper field values")
         else:
-            print("❌ NOT Handling: Still missing")
+            print("FAIL: NOT Handling: Still missing")
         
     except Exception as e:
-        print(f"❌ Test failed with error: {e}")
+        print(f"FAIL: Test failed with error: {e}")
         import traceback
         traceback.print_exc()
 

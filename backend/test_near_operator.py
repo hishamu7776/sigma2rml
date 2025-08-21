@@ -30,12 +30,11 @@ detection:
         EventID: 4698
     selection2:
         EventID: 4946
-    timeframe: 5m
     condition: selection1 | near selection2
 """
         
         result_1 = transpiler.transpile(sigma_rule_1)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_1)
         
@@ -55,11 +54,11 @@ detection:
 """
         
         result_2 = transpiler.transpile(sigma_rule_2)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_2)
         
-        # Test Case 3: Near operator with more complex selections
+        # Test Case 3: Near operator with complex selections
         print("\n--- Test Case 3: Near operator with complex selections ---")
         sigma_rule_3 = """
 logsource:
@@ -68,45 +67,45 @@ logsource:
 detection:
     selection1:
         EventID: 4698
-        UserName: 'admin'
+        Image: 'svchost.exe'
     selection2:
         EventID: 4946
-        ProcessName: 'cmd.exe'
+        ServiceName: 'Windows Firewall'
     timeframe: 2m
     condition: selection1 | near selection2
 """
         
         result_3 = transpiler.transpile(sigma_rule_3)
-        print("✅ Transpilation successful")
+        print("PASS: Transpilation successful")
         print("Generated RML:")
         print(result_3)
         
-        print("\n🎯 Near Operator Test Completed!")
-        print("✅ All test cases transpiled successfully")
+        print("\nRESULT: Near Operator Test Completed!")
+        print("PASS: All test cases transpiled successfully")
         
         # Verify near operator functionality
-        print("\n🔍 Verifying Near Operator:")
+        print("\nVERIFY: Verifying Near Operator:")
         
         # Check if near operator is detected and handled
         if "| near" in sigma_rule_1 and "Monitor<start_ts, s1, s2>" in result_1:
-            print("✅ Near Operator: Correctly detected and handled")
+            print("PASS: Near Operator: Correctly detected and handled")
         else:
-            print("❌ Near Operator: Not properly detected or handled")
+            print("FAIL: Near Operator: Not properly detected or handled")
         
         # Check if timeframe is correctly applied
-        if "300000" in result_1 and "10000" in result_2:
-            print("✅ Timeframe: Correctly converted to milliseconds")
+        if "300000" in result_1 and "10000" in result_2 and "120000" in result_3:
+            print("PASS: Timeframe: Correctly converted to milliseconds")
         else:
-            print("❌ Timeframe: Not correctly converted")
+            print("FAIL: Timeframe: Not correctly converted")
         
         # Check if selections are properly defined
         if "safe_selection1" in result_1 and "safe_selection2" in result_1:
-            print("✅ Selections: Properly defined with safe_ prefix")
+            print("PASS: Selections: Properly defined with safe_ prefix")
         else:
-            print("❌ Selections: Not properly defined")
+            print("FAIL: Selections: Not properly defined")
         
     except Exception as e:
-        print(f"❌ Test failed with error: {e}")
+        print(f"FAIL: Test failed with error: {e}")
         import traceback
         traceback.print_exc()
 

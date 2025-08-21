@@ -31,17 +31,36 @@ class ConditionParser:
 
     def _has_timeframe(self, condition_str: str) -> bool:
         """Check if condition contains a timeframe specification"""
-        # Check for timeframe patterns in the condition string
-        if self.timeframe_pattern.search(condition_str):
-            return True
-        
-        # Also check if the condition string contains "timeframe" keyword
-        if "timeframe" in condition_str.lower():
-            return True
-        
+        # Only check for actual temporal operators, not just timeframe field presence
         # Check for near operator which indicates temporal behavior
         if "| near" in condition_str.lower():
             return True
+        
+        # Check for other temporal operators
+        temporal_ops = ['| before', '| after', '| within']
+        for op in temporal_ops:
+            if op in condition_str.lower():
+                return True
+        
+        # Check for quantifiers that indicate temporal behavior
+        quantifier_patterns = [
+            r'\bany of\b',
+            r'\ball of\b',
+            r'\b1 of\b',
+            r'\b2 of\b',
+            r'\b3 of\b',
+            r'\b4 of\b',
+            r'\b5 of\b'
+        ]
+        
+        for pattern in quantifier_patterns:
+            if re.search(pattern, condition_str.lower()):
+                return True
+        
+        # Only check for timeframe patterns if we have temporal operators
+        if any(op in condition_str.lower() for op in ['| near', '| before', '| after', '| within']):
+            if self.timeframe_pattern.search(condition_str):
+                return True
         
         return False
 
@@ -239,6 +258,7 @@ class ConditionParser:
             return QuantifierNode(token.lower(), self.available_names)
         
         elif re.match(r'\d+ of', token, re.IGNORECASE):
+            # Handle patterns like "1 of", "2 of", etc.
             self.eat()
             # Look for selection* pattern
             if self.current_token() and self.current_token().endswith('*'):
@@ -252,10 +272,11 @@ class ConditionParser:
                 else:
                     return QuantifierNode(token.lower(), [base_name])
             else:
-                return QuantifierNode(token.lower(), [])
+                # If no selection* pattern, use all available names
+                return QuantifierNode(token.lower(), self.available_names)
         
         elif token.endswith('*'):
-            # Handle selection* pattern
+            # Handle selection* pattern (defaults to "all of")
             self.eat()
             base_name = token[:-1]  # Remove the *
             # Find all available names that start with this base name
@@ -264,6 +285,24 @@ class ConditionParser:
                 return QuantifierNode("all of", matching_names)
             else:
                 return QuantifierNode("all of", [base_name])
+        
+        elif token.lower() in ['all of', 'any of']:
+            # Handle "all of" and "any of" patterns
+            self.eat()
+            # Look for selection* pattern
+            if self.current_token() and self.current_token().endswith('*'):
+                selection = self.eat()
+                # Extract the base name without the *
+                base_name = selection[:-1]
+                # Find all available names that start with this base name
+                matching_names = [name for name in self.available_names if name.startswith(base_name)]
+                if matching_names:
+                    return QuantifierNode(token.lower(), matching_names)
+                else:
+                    return QuantifierNode(token.lower(), [base_name])
+            else:
+                # If no selection* pattern, use all available names
+                return QuantifierNode(token.lower(), self.available_names)
         
         elif token in self.available_names:
             self.eat()

@@ -25,33 +25,33 @@ def test_rml_endpoint():
         # Check if file exists in registry
         record = get_file_record(filename)
         if record:
-            print(f"✅ File found in registry")
+            print(f"PASS File found in registry")
             print(f"   Translated: {record.get('translated')}")
             print(f"   RML path: {record.get('rml_path')}")
         else:
-            print("❌ File not found in registry")
+            print("FAIL File not found in registry")
             return
         
         # Test the legacy endpoint (what frontend uses)
         try:
             result = view_rml_legacy(filename)
-            print("✅ Legacy endpoint (/rml/{filename}) works")
+            print("PASS Legacy endpoint (/rml/{filename}) works")
             print(f"   RML content length: {len(result.get('rml', ''))}")
         except Exception as e:
-            print(f"❌ Legacy endpoint failed: {e}")
+            print(f"FAIL Legacy endpoint failed: {e}")
         
         # Test the new endpoint
         try:
             result = view_rml(filename)
-            print("✅ New endpoint (/{filename}/rml) works")
+            print("PASS New endpoint (/{filename}/rml) works")
             print(f"   RML content length: {len(result.get('rml', ''))}")
         except Exception as e:
-            print(f"❌ New endpoint failed: {e}")
+            print(f"FAIL New endpoint failed: {e}")
         
-        print("\n🎯 RML endpoint test completed!")
+        print("\nRESULT RML endpoint test completed!")
         
     except Exception as e:
-        print(f"❌ Test failed with error: {e}")
+        print(f"FAIL Test failed with error: {e}")
 
 if __name__ == "__main__":
     test_rml_endpoint()
