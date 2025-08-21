@@ -377,12 +377,38 @@ class SigmaToRMLTranspiler:
         
         for key in detection.keys():
             if key not in ['condition', 'timeframe']:
+                # Get the field values for this selection
+                field_values = detection[key]
+                if isinstance(field_values, dict):
+                    # Handle field-based selections
+                    field_pairs = []
+                    for field, field_value in field_values.items():
+                        if isinstance(field_value, list):
+                            # Handle list values
+                            if all(isinstance(v, str) for v in field_value):
+                                quoted_values = [f"'{v}'" for v in field_value]
+                                field_pairs.append(f"{field.lower()}: {' | '.join(quoted_values)}")
+                            else:
+                                field_pairs.append(f"{field.lower()}: {' | '.join(str(v) for v in field_value)}")
+                        elif isinstance(field_value, str):
+                            field_pairs.append(f"{field.lower()}: '{field_value}'")
+                        else:
+                            field_pairs.append(f"{field.lower()}: {field_value}")
+                    
+                    if field_pairs:
+                        field_str = f"{{{', '.join(field_pairs)}}}"
+                    else:
+                        field_str = "{}"
+                else:
+                    # Handle simple selections
+                    field_str = "{}"
+                
                 if key in negated_selections:
                     # This selection is negated, so safe_selection should match the selection
-                    rml_lines.append(f"safe_{key} matches {key};")
+                    rml_lines.append(f"safe_{key} matches {field_str};")
                 else:
                     # This selection is not negated, so safe_selection should not match the selection
-                    rml_lines.append(f"safe_{key} not matches {key};")
+                    rml_lines.append(f"safe_{key} not matches {field_str};")
         
         # Add comment for negation section
         if rml_lines:
