@@ -30,38 +30,20 @@ class ConditionParser:
             return self.expression()
 
     def _has_timeframe(self, condition_str: str) -> bool:
-        """Check if condition contains a timeframe specification"""
-        # Only check for actual temporal operators, not just timeframe field presence
-        # Check for near operator which indicates temporal behavior
-        if "| near" in condition_str.lower():
+        """Check if condition has temporal characteristics"""
+        if not condition_str:
+            return False
+        
+        # Check for explicit temporal operators first
+        temporal_operators = ['| near', '| before', '| after', '| within', '| count']
+        if any(op in condition_str.lower() for op in temporal_operators):
             return True
         
-        # Check for other temporal operators
-        temporal_ops = ['| before', '| after', '| within']
-        for op in temporal_ops:
-            if op in condition_str.lower():
-                return True
+        # Check for timeframe patterns only if we have temporal operators
+        if self.timeframe_pattern.search(condition_str):
+            return True
         
-        # Check for quantifiers that indicate temporal behavior
-        quantifier_patterns = [
-            r'\bany of\b',
-            r'\ball of\b',
-            r'\b1 of\b',
-            r'\b2 of\b',
-            r'\b3 of\b',
-            r'\b4 of\b',
-            r'\b5 of\b'
-        ]
-        
-        for pattern in quantifier_patterns:
-            if re.search(pattern, condition_str.lower()):
-                return True
-        
-        # Only check for timeframe patterns if we have temporal operators
-        if any(op in condition_str.lower() for op in ['| near', '| before', '| after', '| within']):
-            if self.timeframe_pattern.search(condition_str):
-                return True
-        
+        # Quantifiers alone are NOT temporal - they're basic patterns
         return False
 
     def _parse_temporal_condition(self):

@@ -162,6 +162,20 @@ class SigmaToRMLTranspiler:
                 return f"Monitor = {safe_selections[0]}*;"
             else:
                 return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
+        elif re.search(r'\b\d+ of\b', condition_str.lower()):
+            # Check if it's a supported number
+            match = re.search(r'\b(\d+) of\b', condition_str.lower())
+            if match:
+                number = int(match.group(1))
+                if number == 1:
+                    # 1 of is supported
+                    if len(safe_selections) == 1:
+                        return f"Monitor = {safe_selections[0]}*;"
+                    else:
+                        return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
+                else:
+                    # Other numbers are not supported
+                    return f"// UNSUPPORTED: {number} of pattern not supported. Only 1 of, any of, all of are supported."
         elif " and " in condition_str.lower():
             # Sigma AND condition: use OR in RML Monitor (negative logic)
             if len(safe_selections) == 1:
@@ -183,7 +197,7 @@ class SigmaToRMLTranspiler:
                 return f"Monitor = ({' \\/ '.join(safe_selections)})*;"
     
     def _extract_selections_from_ast(self, ast):
-        """Extract selection names from the AST"""
+        """Extract selection names from the AST, excluding negated ones"""
         selections = set()
         
         if isinstance(ast, NameNode):
@@ -195,9 +209,16 @@ class SigmaToRMLTranspiler:
             selections.update(self._extract_selections_from_ast(ast.left))
             selections.update(self._extract_selections_from_ast(ast.right))
         elif isinstance(ast, NotNode):
-            selections.update(self._extract_selections_from_ast(ast.operand))
+            # For NOT nodes, we don't add the negated selection to the Monitor
+            # The negated selection will be handled in the safe_selection definition
+            pass
         elif isinstance(ast, QuantifierNode):
             selections.update(ast.selections)
+        
+        # Filter out negated selections from the Monitor
+        condition_str = getattr(self, 'original_condition', '')
+        negated_selections = self._extract_negated_selections(condition_str)
+        selections = selections - negated_selections
         
         return list(selections)
 
@@ -220,7 +241,11 @@ class SigmaToRMLTranspiler:
                 # selection1 | near selection2
                 selection1 = ast.selection1
                 selection2 = ast.selection2
-                timeframe = ast.timeframe or "10s"  # Default 10 seconds
+                # For near operations, use 10s default if no timeframe specified
+                if hasattr(ast, 'timeframe') and ast.timeframe:
+                    timeframe = ast.timeframe
+                else:
+                    timeframe = "10s"  # Default 10 seconds for near operations
                 
                 return f"""Monitor<start_ts, s1, s2> = 
 {{
@@ -346,15 +371,46 @@ class SigmaToRMLTranspiler:
                 rml_lines.append(f"{key} matches {{}};")
         
         # Add negation definitions for safe selections
+        # We need to analyze the condition to determine which selections are negated
+        condition_str = getattr(self, 'original_condition', '')
+        negated_selections = self._extract_negated_selections(condition_str)
+        
         for key in detection.keys():
             if key not in ['condition', 'timeframe']:
-                rml_lines.append(f"safe_{key} not matches {key};")
+                if key in negated_selections:
+                    # This selection is negated, so safe_selection should match the selection
+                    rml_lines.append(f"safe_{key} matches {key};")
+                else:
+                    # This selection is not negated, so safe_selection should not match the selection
+                    rml_lines.append(f"safe_{key} not matches {key};")
         
         # Add comment for negation section
         if rml_lines:
             rml_lines.insert(0, "// negation")
         
         return "\n".join(rml_lines)
+    
+    def _extract_negated_selections(self, condition_str: str) -> set:
+        """Extract which selections are negated in the condition"""
+        negated = set()
+        if not condition_str:
+            return negated
+        
+        # Simple pattern matching for NOT conditions
+        # Look for patterns like "not selection" or "~selection"
+        import re
+        
+        # Pattern 1: "not selection" (space separated)
+        not_pattern1 = r'\bnot\s+(\w+)'
+        matches1 = re.findall(not_pattern1, condition_str.lower())
+        negated.update(matches1)
+        
+        # Pattern 2: "~selection" (tilde prefix)
+        not_pattern2 = r'~(\w+)'
+        matches2 = re.findall(not_pattern2, condition_str.lower())
+        negated.update(matches2)
+        
+        return negated
     
     def _generate_main_expression(self, ast: ASTNode, detection: dict) -> str:
         """Generate main expression RML"""
@@ -365,33 +421,26 @@ class SigmaToRMLTranspiler:
         if isinstance(ast, EnhancedTemporalNode):
             return "// Main expression handled by temporal monitor"
         
-        # For regular conditions, generate the main expression
-        if hasattr(ast, 'to_rml'):
-            return ast.to_rml()
-        
-        # Handle basic AST nodes that don't have to_rml method
+        # For basic patterns, always generate the Main line
+        # Don't call ast.to_rml() as it generates AST representation instead of Main line
         if isinstance(ast, NameNode):
             # Single selection
-            return f"// Main expression: {ast.name}"
+            return f"Main = logsource >> Monitor;"
         elif isinstance(ast, AndNode):
             # AND condition
-            left = self._get_node_representation(ast.left)
-            right = self._get_node_representation(ast.right)
-            return f"// Main expression: {left} and {right}"
+            return f"Main = logsource >> Monitor;"
         elif isinstance(ast, OrNode):
             # OR condition
-            left = self._get_node_representation(ast.left)
-            right = self._get_node_representation(ast.right)
-            return f"// Main expression: {left} or {right}"
+            return f"Main = logsource >> Monitor;"
         elif isinstance(ast, NotNode):
             # NOT condition
-            operand = self._get_node_representation(ast.operand)
-            return f"// Main expression: not {operand}"
+            return f"Main = logsource >> Monitor;"
         elif isinstance(ast, QuantifierNode):
-            # Quantifier condition
-            return f"// Main expression: {ast.quantifier} of {', '.join(ast.selections)}"
+            # Quantifier condition - this is a basic pattern, not temporal
+            return f"Main = logsource >> Monitor;"
         
-        return "// Main expression not available"
+        # Fallback for any other node types
+        return f"Main = logsource >> Monitor;"
     
     def _get_node_representation(self, node) -> str:
         """Get a string representation of a node"""
@@ -469,24 +518,11 @@ class SigmaToRMLTranspiler:
             return False
         
         # Check for temporal operators
-        temporal_operators = ['| near', '| before', '| after', '| within']
+        temporal_operators = ['| near', '| before', '| after', '| within', '| count']
         for op in temporal_operators:
             if op in condition.lower():
                 return True
         
-        # Check for quantifiers that indicate temporal behavior
-        quantifier_patterns = [
-            r'\bany of\b',
-            r'\ball of\b',
-            r'\b1 of\b',
-            r'\b2 of\b',
-            r'\b3 of\b',
-            r'\b4 of\b',
-            r'\b5 of\b'
-        ]
-        
-        for pattern in quantifier_patterns:
-            if re.search(pattern, condition.lower()):
-                return True
-        
+        # Quantifiers alone are NOT temporal - they're basic patterns
+        # Only treat them as temporal if combined with actual temporal operators
         return False
