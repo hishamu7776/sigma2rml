@@ -711,7 +711,7 @@ class RefactoredTranspiler:
             return self._generate_near_monitor(selections, timeframe_ms)
         
         # Handle general temporal conditions (with timeframe)
-        return self._generate_general_temporal_monitor(selections, timeframe_ms)
+        return self._generate_general_temporal_monitor(condition, selections, timeframe_ms)
     
     def _generate_count_monitor(self, selection: str, timeframe_ms: int) -> str:
         """Generate monitor for count operations"""
@@ -750,29 +750,29 @@ class RefactoredTranspiler:
             if (s2 == 1) empty else Monitor<start_ts, 1, s2>
         )
     )
-}}
-\\/
-{{
-    let ts; timed_{selection2}(ts) (
-        if (start_ts == 0 || ts - start_ts > {timeframe_ms})
-            Monitor<ts, 0, 1>
-        else (
-            if (s1 == 1) empty else Monitor<start_ts, s1, 1>                    
-        )
-    )
-}}
-\\/
-{{
-    let ts; timed_other_events(ts) (
-        if (start_ts > 0 && ts - start_ts > {timeframe_ms})
-            Monitor<0, 0, 0>            
-        else (
-            Monitor<start_ts, s1, s2>
-        )
-    )
-}};"""
+     }}
+ /\\
+ {{
+     let ts; timed_{selection2}(ts) (
+         if (start_ts == 0 || ts - start_ts > {timeframe_ms})
+             Monitor<ts, 0, 1>
+         else (
+             if (s1 == 1) empty else Monitor<start_ts, s1, 1>                    
+         )
+     )
+ }}
+ /\\
+ {{
+     let ts; timed_other_events(ts) (
+         if (start_ts > 0 && ts - start_ts > {timeframe_ms})
+             Monitor<0, 0, 0>            
+         else (
+             Monitor<start_ts, s1, s2>
+         )
+     )
+ }};"""
     
-    def _generate_general_temporal_monitor(self, selections: List[str], timeframe_ms: int) -> str:
+    def _generate_general_temporal_monitor(self, condition: str, selections: List[str], timeframe_ms: int) -> str:
         """Generate monitor for general temporal conditions"""
         if len(selections) == 0:
             return "Monitor = empty;"
@@ -791,8 +791,19 @@ class RefactoredTranspiler:
         other_events_case = self._generate_other_events_case(selections, timeframe_ms)
         monitor_cases.append(other_events_case)
         
-        # Join all cases
-        monitor_body = "\n".join(monitor_cases)
+        # Determine operator based on condition logic
+        # If condition contains 'and', use AND (/\)
+        # If condition contains 'or', use OR (\/)
+        if ' and ' in condition:
+            operator = "/\\"
+        elif ' or ' in condition:
+            operator = "\\/"
+        else:
+            # Default to AND for single conditions
+            operator = "/\\"
+        
+        # Join all cases with appropriate operator
+        monitor_body = f"\n{operator}\n".join(monitor_cases)
         
         return f"""Monitor<start_ts, {state_vars}> = 
 {monitor_body};"""
