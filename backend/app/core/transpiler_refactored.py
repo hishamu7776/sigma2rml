@@ -256,13 +256,13 @@ class FieldValueExtractor:
         if field_value.modifier:
             # Handle numerical modifiers
             if field_value.modifier == 'gte':
-                return f"{field_value.field_name}: {field_value.variable_name} with {field_value.variable_name} >= {field_value.value}"
+                return f"{field_value.field_name}: {field_value.variable_name}"
             elif field_value.modifier == 'lte':
-                return f"{field_value.field_name}: {field_value.variable_name} with {field_value.variable_name} <= {field_value.value}"
+                return f"{field_value.field_name}: {field_value.variable_name}"
             elif field_value.modifier == 'gt':
-                return f"{field_value.field_name}: {field_value.variable_name} with {field_value.variable_name} > {field_value.value}"
+                return f"{field_value.field_name}: {field_value.variable_name}"
             elif field_value.modifier == 'lt':
-                return f"{field_value.field_name}: {field_value.variable_name} with {field_value.variable_name} < {field_value.value}"
+                return f"{field_value.field_name}: {field_value.variable_name}"
             else:
                 return f"{field_value.field_name}: {field_value.value}"
         else:
@@ -300,22 +300,40 @@ class RMLLineGenerator:
     def generate_selection_definition(selection: Selection) -> str:
         """Generate a selection definition line"""
         field_pairs = []
+        constraints = []
         
         for field_name, field_value in selection.fields.items():
             formatted_value = FieldValueExtractor.format_field_value(field_value)
             field_pairs.append(formatted_value)
+            
+            # Collect constraints for numerical modifiers
+            if field_value.modifier and field_value.variable_name:
+                if field_value.modifier == 'gte':
+                    constraints.append(f"{field_value.variable_name} >= {field_value.value}")
+                elif field_value.modifier == 'lte':
+                    constraints.append(f"{field_value.variable_name} <= {field_value.value}")
+                elif field_value.modifier == 'gt':
+                    constraints.append(f"{field_value.variable_name} > {field_value.value}")
+                elif field_value.modifier == 'lt':
+                    constraints.append(f"{field_value.variable_name} < {field_value.value}")
         
         if field_pairs:
             field_str = f"{{{', '.join(field_pairs)}}}"
         else:
             field_str = "{}"
         
+        # Add constraints after the field definition if any exist
+        if constraints:
+            constraint_str = f" with {' and '.join(constraints)}"
+        else:
+            constraint_str = ""
+        
         # Sigma semantics: detect A means RML should filter out A (not matches)
         # Sigma semantics: not A means RML should ensure A is present (matches)
         if selection.negated:
-            return f"safe_{selection.name} matches {field_str};"
+            return f"safe_{selection.name} matches {field_str}{constraint_str};"
         else:
-            return f"safe_{selection.name} not matches {field_str};"
+            return f"safe_{selection.name} not matches {field_str}{constraint_str};"
     
     @staticmethod
     def generate_main_expression() -> str:
@@ -355,9 +373,12 @@ class RMLLineGenerator:
         elif '2 of selection*' in original_condition or '3 of selection*' in original_condition:
             return f"Monitor = UNSUPPORTED_PATTERN; // {original_condition} not supported"
         
-        # Handle complex conditions with mixed operators
-        # For complex conditions like "A and (B or C)" or "A and not (B or C)",
-        # we typically want AND in RML (all conditions must be satisfied for safety)
+        # Handle complex conditions with parentheses and mixed operators
+        # This is the key fix for the bug you identified
+        if '(' in original_condition and ')' in original_condition:
+            return RMLLineGenerator._generate_complex_monitor_expression(original_condition, safe_selections)
+        
+        # Handle simple mixed operators without parentheses
         if ' and ' in original_condition and ' or ' in original_condition:
             # Complex mixed condition - use AND for safety
             return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
@@ -368,6 +389,87 @@ class RMLLineGenerator:
         
         # Default case: assume AND for multiple selections
         return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
+    
+    @staticmethod
+    def _generate_complex_monitor_expression(condition: str, safe_selections: List[str]) -> str:
+        """Generate monitor expression for complex conditions with parentheses"""
+        # Find all parenthesized expressions
+        import re
+        paren_pattern = r'\(([^)]+)\)'
+        paren_matches = re.findall(paren_pattern, condition)
+        
+        if not paren_matches:
+            # Fallback to simple case
+            return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
+        
+        # Create definitions for parenthesized expressions
+        definitions = []
+        simplified_condition = condition
+        
+        # Process parentheses in reverse order to avoid replacement conflicts
+        for i, paren_content in enumerate(reversed(paren_matches)):
+            # Extract selections from the parenthesized content
+            paren_selections = []
+            for sel in safe_selections:
+                sel_name = sel.replace('safe_', '')
+                if sel_name in paren_content:
+                    paren_selections.append(sel)
+            
+            if paren_selections:
+                # Create a unique name for this parenthesized expression
+                # Use the first word from the content as the name
+                first_word = paren_content.split()[0]
+                if first_word in [sel.replace('safe_', '') for sel in safe_selections]:
+                    # If first word is a selection name, use it as the definition name
+                    definition_name = first_word.capitalize()
+                else:
+                    # Otherwise use a generic name
+                    definition_name = f"Group{i+1}"
+                
+                # Determine the operator inside parentheses
+                if ' or ' in paren_content:
+                    # OR inside parentheses becomes AND in RML (all must be safe)
+                    definition = f"{definition_name} = ({' /\\ '.join(paren_selections)});"
+                else:
+                    # AND inside parentheses becomes OR in RML (any can be safe)
+                    definition = f"{definition_name} = ({' \\/ '.join(paren_selections)});"
+                
+                definitions.append(definition)
+                
+                # Replace the parenthesized expression with the definition name
+                # Use a more specific replacement to avoid conflicts
+                simplified_condition = simplified_condition.replace(f"({paren_content})", definition_name)
+        
+        # Now generate the main monitor expression using the simplified condition
+        # Convert Sigma AND to RML OR (any condition being safe makes the log safe)
+        if ' and ' in simplified_condition:
+            # Split by AND and create OR expression
+            parts = [part.strip() for part in simplified_condition.split(' and ')]
+            monitor_parts = []
+            
+            for part in parts:
+                # Remove any 'not' operators since negation is handled in event types
+                part = part.replace('not ', '').strip()
+                if part in [sel.replace('safe_', '') for sel in safe_selections]:
+                    # This is a selection name, add safe_ prefix
+                    monitor_parts.append(f"safe_{part}")
+                else:
+                    # This is a definition name, use as is
+                    monitor_parts.append(part)
+            
+            monitor_expr = f"Monitor = ({' \\/ '.join(monitor_parts)})*;"
+        else:
+            # No AND operators, use the simplified condition directly
+            # Remove any 'not' operators since negation is handled in event types
+            simplified_condition = simplified_condition.replace('not ', '').strip()
+            monitor_expr = f"Monitor = {simplified_condition}*;"
+        
+        # Combine definitions and monitor expression
+        # Put Monitor first, then definitions for better readability
+        if definitions:
+            return '\n'.join([monitor_expr] + definitions)
+        else:
+            return monitor_expr
 
 class RefactoredTranspiler:
     """Main transpiler class with clean, modular architecture"""
@@ -466,7 +568,10 @@ class RefactoredTranspiler:
         main_line = self.rml_generator.generate_main_expression()
         
         # Generate monitor expression using original condition for structure analysis
-        monitor_line = self.rml_generator.generate_monitor_expression(original_condition, selections)
+        monitor_expression = self.rml_generator.generate_monitor_expression(original_condition, selections)
+        
+        # Split monitor expression into lines (it might contain definitions + monitor)
+        monitor_lines = monitor_expression.split('\n')
         
         # Assemble RML
         rml_lines = [
@@ -478,7 +583,7 @@ class RefactoredTranspiler:
             "",
             "// property section",
             main_line,
-            monitor_line
+            *monitor_lines
         ]
         
         return '\n'.join(rml_lines)
