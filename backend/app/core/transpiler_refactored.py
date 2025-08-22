@@ -704,7 +704,7 @@ class RefactoredTranspiler:
         """Generate temporal monitor expression"""
         # Handle count operations first
         if '| count()' in condition:
-            return self._generate_count_monitor(selections[0], timeframe_ms)
+            return self._generate_count_monitor(condition, selections[0], timeframe_ms)
         
         # Handle near operations
         if '| near' in condition:
@@ -713,15 +713,44 @@ class RefactoredTranspiler:
         # Handle general temporal conditions (with timeframe)
         return self._generate_general_temporal_monitor(condition, selections, timeframe_ms)
     
-    def _generate_count_monitor(self, selection: str, timeframe_ms: int) -> str:
+    def _generate_count_monitor(self, condition: str, selection: str, timeframe_ms: int) -> str:
         """Generate monitor for count operations"""
+        # Parse the count condition to extract operator and threshold
+        import re
+        
+        # Extract count condition: selection | count() > 100, selection | count() <= 50, etc.
+        count_pattern = r'count\(\)\s*([<>=]+)\s*(\d+)'
+        count_match = re.search(count_pattern, condition)
+        
+        if count_match:
+            operator = count_match.group(1)
+            threshold = int(count_match.group(2))
+            
+            # Adjust threshold based on operator for count+1 comparison
+            if operator in ['>', '>=']:
+                # For count() > 100, we check count+1 > 100
+                # For count() >= 100, we check count+1 > 99
+                adjusted_threshold = threshold if operator == '>' else threshold - 1
+                comparison = f"count+1 > {adjusted_threshold}"
+            elif operator in ['<', '<=']:
+                # For count() < 100, we check count+1 < 100
+                # For count() <= 100, we check count+1 < 101
+                adjusted_threshold = threshold if operator == '<' else threshold + 1
+                comparison = f"count+1 < {adjusted_threshold}"
+            else:
+                # Fallback for unknown operators
+                comparison = f"count+1 > {threshold}"
+        else:
+            # Default fallback if pattern not found
+            comparison = "count+1 > 4"
+        
         return f"""Monitor<start_ts, count> =
     {{let ts; timed_{selection}(ts)
         (
             if (start_ts == 0 || ts - start_ts > {timeframe_ms}) (
                 Monitor<ts, 1>
             )                
-            else if (count+1 > 4) safe_{selection} else Monitor<start_ts,count+1>
+            else if ({comparison}) safe_{selection} else Monitor<start_ts,count+1>
         )
     }}
     \\/
