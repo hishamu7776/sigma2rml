@@ -76,9 +76,9 @@ Sigma is a generic signature format for SIEM systems. For detailed specification
 
 ### RML (Runtime Monitoring Language)
 RML is a language for defining runtime monitoring specifications. For reference documentation, visit:
-- [RML Language Reference](https://rml-lang.org/)
-- [RML Specification](https://rml-lang.org/specification)
-- [RML Examples](https://rml-lang.org/examples)
+- [RML Language Reference](https://rmlatdibris.github.io/)
+- [RML Specification](https://rmlatdibris.github.io/rml.html)
+- [RML Examples](https://rmlatdibris.github.io/examples.html)
 
 ## 🧪 Testing
 
