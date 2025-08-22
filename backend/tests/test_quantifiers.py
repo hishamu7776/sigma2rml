@@ -11,7 +11,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.transpiler import SigmaToRMLTranspiler
+from app.core.transpiler_refactored import RefactoredTranspiler
 
 def test_all_of_them():
     """Test 'all of them' pattern"""
@@ -33,7 +33,7 @@ def test_all_of_them():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -62,7 +62,7 @@ def test_all_of_selection_star():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -91,7 +91,7 @@ def test_1_of_selection_star():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -123,7 +123,7 @@ def test_n_of_selection_star():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()

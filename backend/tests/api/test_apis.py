@@ -9,7 +9,7 @@ import os
 import shutil
 
 # Add the app directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 def test_storage_functions():
     """Test storage database functions"""
@@ -70,9 +70,9 @@ def test_transpiler():
     print("\n=== Testing Core Transpiler ===")
     
     try:
-        from app.core.transpiler import SigmaToRMLTranspiler
+        from app.core.transpiler_refactored import RefactoredTranspiler
         
-        transpiler = SigmaToRMLTranspiler()
+        transpiler = RefactoredTranspiler()
         
         # Test basic rule transpilation
         test_sigma = """
@@ -171,8 +171,8 @@ detection:
 """
         
         # Note: We can't actually call the async functions here, but we can test the logic
-        from app.core.transpiler import SigmaToRMLTranspiler
-        transpiler = SigmaToRMLTranspiler()
+        from app.core.transpiler_refactored import RefactoredTranspiler
+        transpiler = RefactoredTranspiler()
         
         try:
             result = transpiler.transpile(test_sigma)

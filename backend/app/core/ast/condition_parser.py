@@ -111,8 +111,8 @@ class ConditionParser:
         if self.detection and 'timeframe' in self.detection:
             return self.detection['timeframe']
         
-        # Default timeframe if none found
-        return "5m"
+        # Default timeframe if none found - use 10s for near operations
+        return "10s"
 
     def tokenize(self, text):
         """

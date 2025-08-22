@@ -7,14 +7,14 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.transpiler import SigmaToRMLTranspiler
+from app.core.transpiler_refactored import RefactoredTranspiler
 
 def test_unsupported_modifiers():
     """Test that unsupported modifiers are properly handled"""
     print("Testing Unsupported Modifiers in Sigma to RML")
     print("=" * 60)
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     
     # Test 1: Unsupported modifier 'contains'
     print("\n=== Test 1: Unsupported 'contains' modifier ===")

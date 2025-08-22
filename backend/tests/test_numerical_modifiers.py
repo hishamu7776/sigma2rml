@@ -8,14 +8,14 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.transpiler import SigmaToRMLTranspiler
+from app.core.transpiler_refactored import RefactoredTranspiler
 
 def test_numerical_modifiers():
     """Test numerical modifiers with different operators and conditions"""
     print("Testing Numerical Modifiers in Sigma to RML")
     print("=" * 60)
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     
     # Test 1: gte (greater than or equal) operator
     print("\n=== Test 1: gte (>=) operator ===")

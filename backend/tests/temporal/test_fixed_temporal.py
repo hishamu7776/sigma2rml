@@ -8,16 +8,16 @@ import sys
 import os
 
 # Add the app directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 def test_fixed_temporal_monitor():
     """Test the fixed temporal monitor system"""
     print("=== Testing Fixed Temporal Monitor System ===")
     
     try:
-        from app.core.transpiler import SigmaToRMLTranspiler
+        from app.core.transpiler_refactored import RefactoredTranspiler
         
-        transpiler = SigmaToRMLTranspiler()
+        transpiler = RefactoredTranspiler()
         
         # Test Case 1: Simple AND operation with timeframe (from manual test)
         print("\n--- Test Case 1: Simple AND with timeframe ---")

@@ -10,7 +10,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.transpiler import SigmaToRMLTranspiler
+from app.core.transpiler_refactored import RefactoredTranspiler
 
 def test_complex_not_condition():
     """Test complex condition with NOT and parentheses"""
@@ -45,7 +45,7 @@ def test_complex_not_condition():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -71,7 +71,7 @@ def test_comparison_operators():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -98,7 +98,7 @@ def test_multiple_filters():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -120,7 +120,7 @@ def test_empty_condition():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -131,7 +131,7 @@ def test_invalid_yaml():
     
     try:
         # This should be handled gracefully
-        transpiler = SigmaToRMLTranspiler()
+        transpiler = RefactoredTranspiler()
         result = transpiler.transpile("invalid yaml content")
         print(result)
     except Exception as e:

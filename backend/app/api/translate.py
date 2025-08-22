@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException
-from app.core.transpiler import SigmaToRMLTranspiler
+from app.core.transpiler_refactored import RefactoredTranspiler
 from app.storage.db import get_file_record, update_translation_status
 import os
 import yaml
 
 router = APIRouter()
-transpiler = SigmaToRMLTranspiler()
+transpiler = RefactoredTranspiler()
 
 def resolve_path(stored_path):
     """Resolve stored path to actual file system path"""

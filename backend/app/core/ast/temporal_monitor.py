@@ -11,8 +11,8 @@ class TemporalMonitorGenerator:
     """Generates RML temporal monitor patterns for complex Sigma conditions"""
     
     def __init__(self):
-        self.timeframe_default = "5m"  # Default timeframe
-        self.timeframe_ms = 300000     # Default in milliseconds (5 minutes)
+        self.timeframe_default = "10s"  # Default timeframe for near operations
+        self.timeframe_ms = 10000       # Default in milliseconds (10 seconds)
     
     def parse_timeframe(self, timeframe_str: str) -> int:
         """Parse timeframe string to milliseconds"""
@@ -261,7 +261,8 @@ class EnhancedTemporalNode(ASTNode):
     
     def __init__(self, condition_node: ASTNode, timeframe: str = None, detection: dict = None):
         self.condition_node = condition_node
-        self.timeframe = timeframe or "5m"
+        # For near operations, use 10s default instead of 5m
+        self.timeframe = timeframe or "10s"
         self.detection = detection or {}
         self.generator = TemporalMonitorGenerator()
     

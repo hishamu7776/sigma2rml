@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Form, HTTPException
-from app.core.transpiler import SigmaToRMLTranspiler
+from app.core.transpiler_refactored import RefactoredTranspiler
 import yaml
 
 router = APIRouter()
-transpiler = SigmaToRMLTranspiler()
+transpiler = RefactoredTranspiler()
 
 @router.post("/")
 async def transpile_sigma(sigma_text: str = Form(...)):

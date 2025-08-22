@@ -12,7 +12,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.transpiler import SigmaToRMLTranspiler
+from app.core.transpiler_refactored import RefactoredTranspiler
 
 def test_near_without_timeframe():
     """Test 'selection1 | near selection2' without timeframe (default 10s)"""
@@ -34,7 +34,7 @@ def test_near_without_timeframe():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -60,7 +60,7 @@ def test_near_with_timeframe():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -86,7 +86,7 @@ def test_and_with_timeframe():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -115,7 +115,7 @@ def test_three_way_and_with_timeframe():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -145,7 +145,7 @@ def test_all_of_selection_star_with_timeframe():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -169,7 +169,7 @@ def test_count_operator():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()

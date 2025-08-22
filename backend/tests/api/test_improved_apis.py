@@ -12,7 +12,7 @@ import shutil
 from pathlib import Path
 
 # Add the app directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 def test_improved_storage_functions():
     """Test improved storage database functions"""
@@ -65,9 +65,9 @@ def test_improved_transpiler():
     print("\n=== Testing Improved Core Transpiler ===")
     
     try:
-        from app.core.transpiler import SigmaToRMLTranspiler
+        from app.core.transpiler_refactored import RefactoredTranspiler
         
-        transpiler = SigmaToRMLTranspiler()
+        transpiler = RefactoredTranspiler()
         
         # Test basic Sigma rule
         sigma_rule = {
@@ -202,8 +202,8 @@ detection:
         # Test validation endpoint logic
         try:
             # Note: We can't actually call the async functions here, but we can test the logic
-            from app.core.transpiler import SigmaToRMLTranspiler
-            transpiler = SigmaToRMLTranspiler()
+            from app.core.transpiler_refactored import RefactoredTranspiler
+            transpiler = RefactoredTranspiler()
             
             result = transpiler.transpile(test_sigma)
             if result:

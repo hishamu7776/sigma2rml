@@ -7,7 +7,7 @@ import sys
 import os
 
 # Add the app directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 def test_empty_filename_handling():
     """Test that empty filenames are properly handled"""

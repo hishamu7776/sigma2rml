@@ -8,16 +8,16 @@ after implementing the enhanced temporal monitor system
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 def test_basic_and_conditions():
     """Test basic AND conditions"""
     print("=== Testing Basic AND Conditions ===")
     
     try:
-        from app.core.transpiler import SigmaToRMLTranspiler
+        from app.core.transpiler_refactored import RefactoredTranspiler
         
-        transpiler = SigmaToRMLTranspiler()
+        transpiler = RefactoredTranspiler()
         
         # Test Case 1: Simple AND
         print("\n--- Test Case 1: selection1 and selection2 ---")
@@ -105,9 +105,9 @@ def test_quantifier_patterns():
     print("\n=== Testing Quantifier Patterns ===")
     
     try:
-        from app.core.transpiler import SigmaToRMLTranspiler
+        from app.core.transpiler_refactored import RefactoredTranspiler
         
-        transpiler = SigmaToRMLTranspiler()
+        transpiler = RefactoredTranspiler()
         
         # Test Case 1: any of selection*
         print("\n--- Test Case 1: any of selection* ---")
@@ -197,9 +197,9 @@ def test_temporal_conditions():
     print("\n=== Testing Temporal Conditions ===")
     
     try:
-        from app.core.transpiler import SigmaToRMLTranspiler
+        from app.core.transpiler_refactored import RefactoredTranspiler
         
-        transpiler = SigmaToRMLTranspiler()
+        transpiler = RefactoredTranspiler()
         
         # Test Case 1: Near operator (should use temporal monitor)
         print("\n--- Test Case 1: selection1 | near selection2 ---")
@@ -260,9 +260,9 @@ def test_mixed_conditions():
     print("\n=== Testing Mixed Conditions ===")
     
     try:
-        from app.core.transpiler import SigmaToRMLTranspiler
+        from app.core.transpiler_refactored import RefactoredTranspiler
         
-        transpiler = SigmaToRMLTranspiler()
+        transpiler = RefactoredTranspiler()
         
         # Test Case 1: Basic condition with timeframe field but no temporal operators
         print("\n--- Test Case 1: Basic condition with timeframe field ---")

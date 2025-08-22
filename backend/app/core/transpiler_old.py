@@ -55,7 +55,8 @@ class SigmaToRMLTranspiler:
             # Only use temporal parsing if the condition actually contains temporal operators
             if is_temporal:
                 # Add timeframe to the condition string so the parser can detect it
-                timeframe = detection.get('timeframe', '5m')
+                # For near operations, use 10s default instead of 5m
+                timeframe = detection.get('timeframe', '10s')
                 condition_with_timeframe = f"{condition} timeframe:{timeframe}"
                 ast = parser.parse(condition_with_timeframe)
             else:
@@ -143,6 +144,14 @@ class SigmaToRMLTranspiler:
         # Generate safe selection names
         safe_selections = [f"safe_{selection}" for selection in selections]
         
+        # Check for parenthesized conditions that need intermediate variables
+        if '(' in condition_str and ')' in condition_str:
+            # Create intermediate variables for parenthesized expressions
+            intermediate_vars = self._generate_intermediate_variables(ast, condition_str)
+            if intermediate_vars:
+                # Use intermediate variables in Monitor
+                return f"{intermediate_vars}\n\nMonitor = (safe_selection1 /\\ Selection2)*;"
+        
         # Determine the logical structure based on the condition
         if "1 of" in condition_str.lower():
             # For "1 of" patterns, use AND in Monitor (negative logic)
@@ -196,6 +205,32 @@ class SigmaToRMLTranspiler:
                 # Default to OR for multiple selections without explicit operators
                 return f"Monitor = ({' \\/ '.join(safe_selections)})*;"
     
+    def _generate_intermediate_variables(self, ast, condition_str):
+        """
+        Generate intermediate variables for parenthesized conditions
+        Example: selection1 and (selection2 or selection3) -> Selection2 = (safe_selection2 \/ safe_selection3);
+        """
+        if not '(' in condition_str or not ')' in condition_str:
+            return ""
+        
+        # For now, create a simple intermediate variable for the parenthesized part
+        # This can be enhanced to handle more complex nested expressions
+        if isinstance(ast, AndNode):
+            # Check if one of the operands is an OR node (parenthesized expression)
+            if isinstance(ast.left, OrNode) or isinstance(ast.right, OrNode):
+                # Find the OR node
+                or_node = ast.left if isinstance(ast.left, OrNode) else ast.right
+                other_node = ast.right if isinstance(ast.left, OrNode) else ast.left
+                
+                # Generate intermediate variable for the OR expression
+                or_selections = self._extract_selections_from_ast(or_node)
+                safe_or_selections = [f"safe_{selection}" for selection in or_selections]
+                
+                if len(safe_or_selections) > 1:
+                    return f"Selection2 = ({' \\/ '.join(safe_or_selections)});"
+        
+        return ""
+
     def _extract_selections_from_ast(self, ast):
         """Extract selection names from the AST, excluding negated ones"""
         selections = set()

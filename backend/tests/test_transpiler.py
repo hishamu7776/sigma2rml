@@ -10,7 +10,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.transpiler import SigmaToRMLTranspiler
+from app.core.transpiler_refactored import RefactoredTranspiler
 
 def test_simple_selection():
     """Test simple selection pattern"""
@@ -23,7 +23,7 @@ detection:
     Description: 'Test executable'
   condition: selection
 """
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     rml = transpiler.transpile(sigma)
     print(rml)
     print()
@@ -41,7 +41,7 @@ detection:
     Image: '\\cmd.exe'
   condition: selection
 """
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     rml = transpiler.transpile(sigma)
     print(rml)
     print()
@@ -57,7 +57,7 @@ detection:
     PasswordLastSet|exists: true
   condition: selection
 """
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     rml = transpiler.transpile(sigma)
     print(rml)
     print()
@@ -72,7 +72,7 @@ detection:
     EventID|gt: 4000
   condition: selection
 """
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     rml = transpiler.transpile(sigma)
     print(rml)
     print()
@@ -89,7 +89,7 @@ detection:
     PasswordLastSet: null
   condition: selection and not filter
 """
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     rml = transpiler.transpile(sigma)
     print(rml)
     print()
@@ -106,7 +106,7 @@ detection:
       - 1102
   condition: selection
 """
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     rml = transpiler.transpile(sigma)
     print(rml)
     print()
@@ -122,7 +122,7 @@ detection:
     - 'sekurlsa'
   condition: keywords
 """
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     rml = transpiler.transpile(sigma)
     print(rml)
     print()

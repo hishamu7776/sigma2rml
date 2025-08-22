@@ -10,7 +10,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.transpiler import SigmaToRMLTranspiler
+from app.core.transpiler_refactored import RefactoredTranspiler
 
 def test_simple_selection():
     """Test simple selection pattern"""
@@ -30,7 +30,7 @@ def test_simple_selection():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -52,7 +52,7 @@ def test_multiple_eventids():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -77,7 +77,7 @@ def test_basic_logical_operators():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
@@ -104,7 +104,7 @@ def test_or_condition():
         }
     }
     
-    transpiler = SigmaToRMLTranspiler()
+    transpiler = RefactoredTranspiler()
     result = transpiler.transpile(sigma_rule)
     print(result)
     print()
