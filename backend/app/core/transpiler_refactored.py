@@ -5,7 +5,7 @@ Clean, scalable architecture that handles all Sigma rule patterns systematically
 """
 
 import re
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Dict, List, Any, Tuple, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
 
@@ -379,9 +379,19 @@ class RefactoredTranspiler:
         self.rml_generator = RMLLineGenerator()
         self.variable_counter = 1  # Global counter for variable names
     
-    def transpile(self, sigma_rule: Dict[str, Any]) -> str:
+    def transpile(self, sigma_rule: Union[str, Dict[str, Any]]) -> str:
         """Main transpilation method"""
         try:
+            # Handle both string (YAML) and dict inputs
+            if isinstance(sigma_rule, str):
+                import yaml
+                try:
+                    sigma_rule = yaml.safe_load(sigma_rule)
+                    if not sigma_rule:
+                        return "// Error: Invalid or empty YAML content"
+                except yaml.YAMLError as e:
+                    return f"// Error: Invalid YAML format: {str(e)}"
+            
             # Extract components
             logsource = sigma_rule.get('logsource', {})
             detection = sigma_rule.get('detection', {})
