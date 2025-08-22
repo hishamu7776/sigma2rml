@@ -349,7 +349,7 @@ class RMLLineGenerator:
         if 'any of selection*' in original_condition:
             return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
         elif 'all of selection*' in original_condition:
-            return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
+            return f"Monitor = ({' \\/ '.join(safe_selections)})*;"
         elif '1 of selection*' in original_condition:
             return f"Monitor = ({' /\\ '.join(safe_selections)})*;"
         elif '2 of selection*' in original_condition or '3 of selection*' in original_condition:
